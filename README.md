@@ -12,9 +12,16 @@
 *A local AI coding assistant. No cloud. No tokens. Just you, your machine,*
 *and a god who literally invented writing.*
 
-</div>
+<p>
+  <a href="#requirements">Requirements</a> •
+  <a href="#install">Install</a> •
+  <a href="#companions">Companions</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#configuration">Configuration</a> •
+  <a href="#hardware--models">Hardware</a>
+</p>
 
----
+</div>
 
 Hermes sets up a fully offline AI companion that lives in your terminal. Your code never leaves your machine. No API keys, no subscriptions, no sending your half-finished startup idea to a server farm somewhere.
 
@@ -43,55 +50,45 @@ The script will introduce itself, ask for a name, let you pick your companion, d
 source ~/.zshrc  # or ~/.bashrc
 ```
 
----
-
-## Contents
-
-- [Companions](#companions)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Hardware & models](#hardware--models)
-- [Storage](#storage)
-
----
-
 ## Companions
 
 You don't get a generic chatbot. You pick who rides with you.
 
-| | Chiron | Ares |
-|---|---|---|
-| **Role** | Pair programmer | Implementer |
-| **Style** | Asks before acting | Acts, then mentions it |
-| **Best for** | Learning, complex decisions, architecture | Getting things done fast |
-| **Will push back?** | Yes, always | Only if it's truly wrong |
-| **Mythology** | Immortal centaur. Trained Achilles, Jason, Asclepius. Chose death to free Prometheus. | God of war. Passionate, fierce. His peers trapped him in a bronze jar once. He did not enjoy that. |
+### 🏛 Chiron — pair programmer
+
+Son of Kronos, teacher of heroes. He trained Achilles, Jason, and Asclepius — the man taught a demigod to fight and a mortal to heal the sick. Wise, patient, and annoyingly right most of the time.
+
+Chiron won't just write your code. He'll make sure you understand every decision, ask before acting, call out bad patterns before they haunt you, and question whether that design pattern you found on a blog post is actually warranted here.
+
+### ⚔️ Ares — implementer
+
+God of war. Passionate, fierce, and not exactly known for patience. His peers trapped him in a bronze jar once — he did not enjoy that.
+
+Point Ares at a task and get battle-ready code. Fast, direct, no detours. Just give him clear instructions. For everyone's sake.
 
 > [!TIP]
 > You can override your default companion per session — see [Usage](#usage).
 
----
-
 ## Usage
 
 > [!NOTE]
-> The examples below use `hermes`, but during setup the script will ask you for a name.
+> Examples below use `hermes`, but the setup script lets you pick any name.
 > Hermes already has a name — it's Hermes — but mortals love to rename things.
-> Whatever you chose, replace `hermes` with that.
+> Whatever you chose, use that instead.
 
 ```bash
 hermes start              # wake up
 hermes stop               # rest
+
 hermes my-project         # start or resume a session (uses your default companion)
 hermes new                # fresh unnamed session
 hermes list               # see all sessions
+
 hermes chiron my-project  # summon Chiron for this session
 hermes ares my-project    # summon Ares for this session
 ```
 
 Sessions are saved automatically and resume with full history. You only explain your project once — Chiron will remember.
-
----
 
 ## Configuration
 
@@ -110,14 +107,12 @@ cp ~/ai/hermes/roles/chiron.md ~/.config/aichat/roles/chiron.md
 
 **aichat config** lives at `~/.config/aichat/config.yaml` if you want to tweak anything manually.
 
----
-
 ## Hardware & models
 
 <details>
-<summary>Click to expand — model recommendations by hardware</summary>
+<summary>Model recommendations by hardware</summary>
 
-The setup script auto-detects your hardware and recommends the best model. Here's the logic:
+The setup script auto-detects your hardware and recommends the best model.
 
 | Hardware | Recommended | Safe fallback |
 |---|---|---|
@@ -140,8 +135,6 @@ The setup script auto-detects your hardware and recommends the best model. Here'
 > Apple Silicon uses unified memory — your RAM is your VRAM. A 48GB M4 handles 30B models with room to spare.
 
 </details>
-
----
 
 ## Storage
 
