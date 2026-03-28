@@ -58,13 +58,19 @@ You don't get a generic chatbot. You pick who rides with you.
 
 Son of Kronos, teacher of heroes. He trained Achilles, Jason, and Asclepius — the man taught a demigod to fight and a mortal to heal the sick. Wise, patient, and annoyingly right most of the time.
 
-Chiron won't just write your code. He'll make sure you understand every decision, ask before acting, call out bad patterns before they haunt you, and question whether that design pattern you found on a blog post is actually warranted here.
+- **Style:** asks before acting, suggests an approach and waits for your go-ahead
+- **Best for:** complex decisions, architecture, learning, understanding the codebase
+- **Will push back?** yes — if you're heading toward a bad pattern he'll tell you why before touching anything
+- **Explains:** key decisions as he writes, so you stay in the loop
 
 ### ⚔️ Ares — implementer
 
 God of war. Passionate, fierce, and not exactly known for patience. His peers trapped him in a bronze jar once — he did not enjoy that.
 
-Point Ares at a task and get battle-ready code. Fast, direct, no detours. Just give him clear instructions. For everyone's sake.
+- **Style:** acts first, mentions it if something was off
+- **Best for:** getting things done fast, clear and well-defined tasks
+- **Will push back?** only if something is genuinely wrong — one question, no more
+- **Explains:** only when the why isn't obvious from the code itself
 
 > [!TIP]
 > You can override your default companion per session — see [Usage](#usage).
