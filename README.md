@@ -20,11 +20,34 @@ Hermes sets up a fully offline AI companion that lives in your terminal. Your co
 
 Run the setup once, pick your companion, and get to work.
 
+## Requirements
+
+- **macOS or Linux**
+- [Homebrew](https://brew.sh) — required on macOS, optional on Linux
+
+## Install
+
+```bash
+git clone https://github.com/danielsampar12/Hermes.git ~/ai/hermes
+cd ~/ai/hermes
+chmod +x setup.sh
+./setup.sh
+```
+
+> [!NOTE]
+> Prefer SSH? Use `git@github.com:danielsampar12/Hermes.git` instead.
+
+The script will introduce itself, ask for a name, let you pick your companion, detect your hardware, pull the right model, and configure everything. Reload your shell when it's done:
+
+```bash
+source ~/.zshrc  # or ~/.bashrc
+```
+
+---
+
 ## Contents
 
 - [Companions](#companions)
-- [Requirements](#requirements)
-- [Install](#install)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Hardware & models](#hardware--models)
@@ -46,33 +69,6 @@ You don't get a generic chatbot. You pick who rides with you.
 
 > [!TIP]
 > You can override your default companion per session — see [Usage](#usage).
-
----
-
-## Requirements
-
-- **macOS or Linux**
-- [Homebrew](https://brew.sh) — required on macOS, optional on Linux
-
----
-
-## Install
-
-```bash
-git clone https://github.com/danielsampar12/Hermes.git ~/ai/hermes
-cd ~/ai/hermes
-chmod +x setup.sh
-./setup.sh
-```
-
-> [!NOTE]
-> Prefer SSH? Use `git@github.com:danielsampar12/Hermes.git` instead.
-
-The script will introduce itself, ask for a name, let you pick your companion, detect your hardware, pull the right model, and configure everything. Reload your shell when it's done:
-
-```bash
-source ~/.zshrc  # or ~/.bashrc
-```
 
 ---
 
