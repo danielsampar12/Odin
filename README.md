@@ -74,6 +74,11 @@ You don't get a generic chatbot. You pick who rides with you.
 
 ## Usage
 
+> [!NOTE]
+> The examples below use `hermes`, but during setup the script will ask you for a name.
+> Hermes already has a name — it's Hermes — but mortals love to rename things.
+> Whatever you chose, replace `hermes` with that.
+
 ```bash
 hermes start              # wake up
 hermes stop               # rest
