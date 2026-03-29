@@ -34,7 +34,8 @@ Run the setup once, pick your companion, and get to work.
 - [Homebrew](https://brew.sh) — required on macOS, optional on Linux
 
 ## Install
-
+> [!IMPORTANT]
+> The model download can be **10–20GB** depending on your hardware. Make sure you're on a good connection and have time — this is a one-time step.
 ```bash
 git clone https://github.com/danielsampar12/Hermes.git ~/ai/hermes
 cd ~/ai/hermes
@@ -47,8 +48,6 @@ chmod +x setup.sh
 
 The script will introduce itself, ask for a name, let you pick your companion, detect your hardware, pull the right model, and configure everything. Reload your shell when it's done:
 
-> [!IMPORTANT]
-> The model download can be **10–20GB** depending on your hardware. Make sure you're on a good connection and have time — this is a one-time step.
 
 ```bash
 source ~/.zshrc  # or ~/.bashrc
