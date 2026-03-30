@@ -10,7 +10,7 @@
 </p>
 
 *A local AI coding companion. No cloud. No tokens. Just you, your machine,*
-*and a god who invented writing the hard way.*
+*and a god who hung from a tree for nine days to read the runes. He's seen worse codebases*
 
 <p>
   <a href="#requirements">Requirements</a> •
