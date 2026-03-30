@@ -167,9 +167,13 @@ if [ "$PLATFORM" = "linux" ]; then
     VRAM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1)
     VRAM_GB=$((VRAM / 1024))
     echo "  NVIDIA GPU detected — ${VRAM_GB}GB VRAM"
-    if   [ "$VRAM_GB" -ge 24 ]; then RECOMMENDED_MODEL="qwen3-coder:30b";                   SAFE_MODEL="qwen2.5-coder:32b"
-    elif [ "$VRAM_GB" -ge 12 ]; then RECOMMENDED_MODEL="qwen2.5-coder:14b-instruct-q5_K_M"; SAFE_MODEL="qwen2.5-coder:14b-instruct-q4_K_M"
-    elif [ "$VRAM_GB" -ge 8  ]; then RECOMMENDED_MODEL="qwen2.5-coder:7b";                  SAFE_MODEL="qwen2.5-coder:7b"
+    # Compare in MiB (raw value) to avoid integer division rounding issues.
+    # Thresholds sit in the gap between card tiers — a 12GB card always reports
+    # >11,000 MiB; a 24GB card always reports >23,000 MiB; an 8GB card never
+    # exceeds 8,192 MiB. This is driver-overhead-agnostic.
+    if   [ "$VRAM" -ge 23000 ]; then RECOMMENDED_MODEL="qwen3-coder:30b";                   SAFE_MODEL="qwen2.5-coder:32b"
+    elif [ "$VRAM" -ge 10240 ]; then RECOMMENDED_MODEL="qwen2.5-coder:14b-instruct-q5_K_M"; SAFE_MODEL="qwen2.5-coder:14b-instruct-q4_K_M"
+    elif [ "$VRAM" -ge 6144  ]; then RECOMMENDED_MODEL="qwen2.5-coder:7b";                  SAFE_MODEL="qwen2.5-coder:7b"
     else                              RECOMMENDED_MODEL="qwen2.5-coder:3b";                  SAFE_MODEL="qwen2.5-coder:3b"
     fi
   else
