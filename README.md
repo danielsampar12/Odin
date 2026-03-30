@@ -196,8 +196,10 @@ ollama rm <model-name>   # free up space
 ## Roadmap
 
 - [ ] RAG support — point a companion at your project directory and it indexes it automatically, no more pasting files manually
-- [ ] Tune Thor and Loki roles
+- [ ] Tune Thor, Tyr and Loki roles
 - [ ] Web search support — fetch docs and inject them into context on demand
+- [ ] Everything else
+- [ ] Windows support
 
 ---
 
