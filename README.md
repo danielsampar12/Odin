@@ -120,6 +120,8 @@ odin baldur my-project  # summon Baldur for this session
 odin tyr my-project     # summon Tyr for this session
 odin thor my-project    # summon Thor for this session
 odin loki my-project    # summon Loki (you were warned)
+
+odin add                # forge a new custom companion
 ```
 
 Sessions are saved automatically and resume with full history. You only explain your project once.
@@ -138,6 +140,13 @@ cp ~/ai/odin/roles/baldur.md ~/.config/aichat/roles/baldur.md
 
 ```bash
 ./setup.sh
+```
+
+**Add a custom companion** — run `odin add` and follow the prompts. You can either provide a path to an existing `.md` file or paste the role definition directly. The companion is installed alongside the built-ins and works the same way:
+
+```bash
+odin add              # interactive — name it, then provide a file path or paste text
+odin freya my-project # once added, summon it like any other companion
 ```
 
 **aichat config** lives at `~/.config/aichat/config.yaml` (Linux) or `~/Library/Application Support/aichat/config.yaml` (macOS).

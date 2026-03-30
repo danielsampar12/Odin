@@ -9,6 +9,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+chmod +x "$SCRIPT_DIR/add-companion.sh" "$SCRIPT_DIR/uninstall.sh" 2>/dev/null || true
 
 info()    { echo -e "${GREEN}  ✓${NC} $1"; }
 prompt()  { echo -e "${BLUE}  ?${NC} $1"; }
@@ -314,11 +315,18 @@ ${ASSISTANT_NAME_LOWER}() {
     stop)   ${STOP_CMD} ;;
     new)    aichat --role $ROLE ;;
     list)   aichat --list-sessions ;;
+    add)    bash "$SCRIPT_DIR/add-companion.sh" "$AICHAT_CONFIG_DIR" ;;
     baldur) aichat --role baldur --session "\${2:-default}" ;;
     tyr)    aichat --role tyr    --session "\${2:-default}" ;;
     thor)   aichat --role thor   --session "\${2:-default}" ;;
     loki)   aichat --role loki   --session "\${2:-default}" ;;
-    *)      aichat --role $ROLE  --session "\${1:-default}" ;;
+    *)
+      if [ -f "${AICHAT_CONFIG_DIR}/roles/\${1}.md" ]; then
+        aichat --role "\$1" --session "\${2:-default}"
+      else
+        aichat --role $ROLE --session "\${1:-default}"
+      fi
+      ;;
   esac
 }
 EOF
@@ -342,5 +350,6 @@ echo "    ${ASSISTANT_NAME_LOWER} tyr my-proj    # summon Tyr"
 echo "    ${ASSISTANT_NAME_LOWER} thor my-proj   # summon Thor"
 echo "    ${ASSISTANT_NAME_LOWER} loki my-proj   # summon Loki (you were warned)"
 echo "    ${ASSISTANT_NAME_LOWER} list           # see all sessions"
+echo "    ${ASSISTANT_NAME_LOWER} add            # forge a new companion"
 echo "    ${ASSISTANT_NAME_LOWER} stop           # return to Asgard"
 echo ""
