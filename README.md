@@ -43,9 +43,6 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-> [!NOTE]
-> Prefer SSH? Use `git@github.com:danielsampar12/Hermes.git` instead.
-
 The script will introduce itself, ask for a name, let you pick your companion, detect your hardware, pull the right model, and configure everything. Reload your shell when it's done:
 
 ```bash
