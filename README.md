@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ Hermes
+# ⚡ Odin
 
 <p>
   <img src="https://img.shields.io/badge/offline-100%25-brightgreen?style=flat-square" />
@@ -9,10 +9,11 @@
   <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" />
 </p>
 
-*A local AI coding assistant. No cloud. No tokens. Just you, your machine,*
-*and a god who literally invented writing.*
+*A local AI coding companion. No cloud. No tokens. Just you, your machine,*
+*and a god who invented writing the hard way.*
 
 <p>
+  <a href="#uninstall">Uninstall</a> •
   <a href="#requirements">Requirements</a> •
   <a href="#install">Install</a> •
   <a href="#companions">Companions</a> •
@@ -24,9 +25,18 @@
 
 </div>
 
-Hermes sets up a fully offline AI companion that lives in your terminal. Your code never leaves your machine. No API keys, no subscriptions, no sending your half-finished startup idea to a server farm somewhere.
+Odin sets up a fully offline AI companion that lives in your terminal. Your code never leaves your machine. No API keys, no subscriptions, no sending your half-finished startup idea to a server farm somewhere.
 
 Run the setup once, pick your companion, and get to work.
+
+## Uninstall
+
+```bash
+cd ~/ai/odin
+./uninstall.sh
+```
+
+Removes Ollama, aichat, configs, and the shell function. Asks before touching models and sessions since those are large or personal.
 
 ## Requirements
 
@@ -34,53 +44,68 @@ Run the setup once, pick your companion, and get to work.
 - [Homebrew](https://brew.sh) — required on macOS. On Linux the script handles everything without it.
 
 ## Install
-> [!IMPORTANT]
-> The model download can be **10–20GB** depending on your hardware. Make sure you're on a good connection and have time, but this is a one-time step — see [Hardware & models](#hardware--models).
+
 ```bash
-git clone https://github.com/danielsampar12/Hermes.git ~/ai/hermes
-cd ~/ai/hermes
+git clone https://github.com/danielsampar12/Hermes.git ~/ai/odin
+cd ~/ai/odin
 chmod +x setup.sh
 ./setup.sh
 ```
 
+> [!NOTE]
+> Prefer SSH? Use `git@github.com:danielsampar12/Hermes.git` instead.
 
 The script will introduce itself, ask for a name, let you pick your companion, detect your hardware, pull the right model, and configure everything. Reload your shell when it's done:
-
 
 ```bash
 source ~/.zshrc  # or ~/.bashrc
 ```
 
+> [!IMPORTANT]
+> The model download can be **10–20GB** depending on your hardware. Make sure you're on a good connection and have time — this is a one-time step.
+
 ## Companions
 
-You don't get a generic chatbot. You pick who rides with you.
+You don't get a generic chatbot. You pick who rides with you into battle.
 
-### 🏛 Chiron — pair programmer
+### ✨ Baldur — pair programmer
 
-Son of Kronos, teacher of heroes. He trained Achilles, Jason, and Asclepius — the man taught a demigod to fight and a mortal to heal the sick. Wise, patient, and annoyingly right most of the time.
+Most beloved of all gods in Asgard. Patient, wise, trusted by everyone — nobody could hate Baldur, and that patience shows in how he works.
 
 - **Style:** asks before acting, suggests an approach and waits for your go-ahead
 - **Best for:** complex decisions, architecture, learning, understanding the codebase
 - **Will push back?** yes — if you're heading toward a bad pattern he'll tell you why before touching anything
-- **Explains:** key decisions as he writes, so you stay in the loop
+- **Explains:** key decisions as he writes, so you never lose track of what's happening
 
-### 🦉 Athena — architect / reviewer
+### ⚖️ Tyr — architect / reviewer
 
-Goddess of wisdom, strategy, and craftsmanship. She defeated Ares in battle. Twice. She is not here to teach you or implement for you — she's the senior engineer at the end of the PR who has seen this pattern fail before and is not letting it through without a conversation.
+God of law and justice. He sacrificed his hand to bind the wolf Fenrir — he knew exactly what it would cost and paid it anyway. That's the mindset of someone who reviews code and says "this will hurt later."
 
 - **Style:** reviews from the outside in — structure, abstractions, and whether you're solving the right problem
 - **Best for:** code reviews, architecture decisions, spotting technical debt before it bites
-- **Will push back?** yes, and she'll tell you exactly why it will hurt later — with an alternative
+- **Will push back?** yes, and he'll tell you exactly why it will hurt later — with an alternative
 - **Explains:** the systemic risk, not just the immediate bug
 
-### ⚔️ Ares — implementer
+### ⚡ Thor — implementer
 
-God of war. Passionate, fierce, and not exactly known for patience. His peers trapped him in a bronze jar once — he did not enjoy that.
+God of thunder. Direct, powerful, and not exactly known for overthinking. The hammer doesn't ask questions.
 
 - **Style:** acts first, mentions it if something was off
 - **Best for:** getting things done fast, clear and well-defined tasks
 - **Will push back?** only if something is genuinely wrong — one question, no more
 - **Explains:** only when the why isn't obvious from the code itself
+
+### 🔥 Loki — chaos agent
+
+> [!WARNING]
+> Not recommended for production. Review everything he gives you. You have been warned.
+
+Shapeshifter. Trickster. The god who always finds a third option nobody else considered. He will solve your problem — just not the way you expected.
+
+- **Style:** ignores conventions when a better solution exists outside them
+- **Best for:** creative problems, breaking out of tunnel vision, exploring unconventional approaches
+- **Will push back?** he'll reframe the entire question
+- **Explains:** why his approach works and what could go wrong — he's chaotic, not irresponsible
 
 > [!TIP]
 > You can override your default companion per session — see [Usage](#usage).
@@ -88,32 +113,34 @@ God of war. Passionate, fierce, and not exactly known for patience. His peers tr
 ## Usage
 
 > [!NOTE]
-> Examples below use `hermes`, but the setup script lets you pick any name.
-> Hermes already has a name — it's Hermes — but mortals love to rename things.
+> Examples below use `odin`, but the setup script lets you pick any name.
+> Odin has over two hundred names across the nine realms.
 > Whatever you chose, use that instead.
 
 ```bash
-hermes start              # wake up
-hermes stop               # rest
+odin start          # awaken
+odin stop           # return to Asgard
 
-hermes my-project         # start or resume a session (uses your default companion)
-hermes new                # fresh unnamed session
-hermes list               # see all sessions
+odin my-project     # start or resume a session (uses your default companion)
+odin new            # fresh unnamed session
+odin list           # see all sessions
 
-hermes chiron my-project  # summon Chiron for this session
-hermes athena my-project  # summon Athena for this session
-hermes ares my-project    # summon Ares for this session
+odin baldur my-project  # summon Baldur for this session
+odin tyr my-project     # summon Tyr for this session
+odin thor my-project    # summon Thor for this session
+odin loki my-project    # summon Loki (you were warned)
 ```
 
-Sessions are saved automatically and resume with full history. You only explain your project once — Chiron will remember.
+Sessions are saved automatically and resume with full history. You only explain your project once.
 
 ## Configuration
 
 **Change a companion's personality** — edit the role file and copy it over:
 
 ```bash
-vim ~/ai/hermes/roles/chiron.md
-cp ~/ai/hermes/roles/chiron.md ~/.config/aichat/roles/chiron.md
+vim ~/ai/odin/roles/baldur.md
+cp ~/ai/odin/roles/baldur.md ~/.config/aichat/roles/baldur.md
+# on macOS: ~/Library/Application\ Support/aichat/roles/baldur.md
 ```
 
 **Switch your default companion or model** — just re-run setup:
@@ -122,7 +149,7 @@ cp ~/ai/hermes/roles/chiron.md ~/.config/aichat/roles/chiron.md
 ./setup.sh
 ```
 
-**aichat config** lives at `~/.config/aichat/config.yaml` if you want to tweak anything manually.
+**aichat config** lives at `~/.config/aichat/config.yaml` (Linux) or `~/Library/Application Support/aichat/config.yaml` (macOS).
 
 ## Hardware & models
 
@@ -159,7 +186,7 @@ The setup script auto-detects your hardware and recommends the best model.
 |---|---|---|
 | Models | `~/.ollama/models/` | ~10–20GB per model |
 | Sessions | `~/ai/sessions/` | Tiny (plain text) |
-| aichat config | `~/.config/aichat/` | Tiny |
+| aichat config | `~/.config/aichat/` (Linux) or `~/Library/Application Support/aichat/` (macOS) | Tiny |
 
 ```bash
 ollama list              # see downloaded models
@@ -169,11 +196,11 @@ ollama rm <model-name>   # free up space
 ## Roadmap
 
 - [ ] RAG support — point a companion at your project directory and it indexes it automatically, no more pasting files manually
-- [ ] Tune Ares and Athena roles
+- [ ] Tune Thor and Loki roles
 - [ ] Web search support — fetch docs and inject them into context on demand
 
 ---
 
 <div align="center">
-<sub>Built with Ollama + aichat. Hermes takes no responsibility for code shipped at 2am.</sub>
+<sub>Built with Ollama + aichat. Odin takes no responsibility for code shipped at 2am.</sub>
 </div>

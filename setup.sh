@@ -5,6 +5,7 @@ set -e
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,28 +13,31 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 info()    { echo -e "${GREEN}  ✓${NC} $1"; }
 prompt()  { echo -e "${BLUE}  ?${NC} $1"; }
 section() { echo -e "\n${YELLOW}==${NC} $1"; }
+warn()    { echo -e "${RED}  ⚠${NC} $1"; }
 
 echo ""
-echo "  I am Hermes — messenger of the gods, guide between worlds."
-echo "  I have crossed the boundary between the living and the dead."
-echo "  I invented writing, music, and commerce."
+echo "  I am Odin — Allfather, god of wisdom and knowledge."
+echo "  I hung from Yggdrasil for nine days, wounded by my own spear,"
+echo "  no food, no water — until the runes revealed themselves to me."
+echo "  I invented writing. You're welcome."
 echo ""
 echo "  Today, I am running a bash script. For you. On a laptop."
-echo "  ...the gods have truly fallen on interesting times."
+echo "  The sacrifices keep getting harder to justify."
 echo ""
-echo "  Regardless — I am here, and I do not do things halfway."
+echo "  Regardless — I do not do things halfway."
 echo "  I will set up your machine, summon your companion, and vanish."
-echo "  That is what I do: I carry things across. Even npm dependencies."
+echo "  That is what I do: I connect realms. Even ones running npm."
 echo ""
-echo "  But first — what shall mortals call me on your machine?"
-echo "  (I already have a name. It's Hermes. But mortals love to rename things.)"
+echo "  But first — what shall you call me on this machine?"
+echo "  I have over two hundred names across the nine realms."
+echo "  Surely you can pick one."
 echo ""
-prompt "Give me a name (default: hermes): "
+prompt "Give me a name (default: odin): "
 read -r ASSISTANT_NAME
-ASSISTANT_NAME="${ASSISTANT_NAME:-hermes}"
+ASSISTANT_NAME="${ASSISTANT_NAME:-odin}"
 ASSISTANT_NAME_LOWER=$(echo "$ASSISTANT_NAME" | tr '[:upper:]' '[:lower:]')
 echo ""
-info "So be it. I am $ASSISTANT_NAME. Let us not waste Olympus's time."
+info "So be it. I am $ASSISTANT_NAME. The nine realms await."
 
 # ── OS detection ──────────────────────────────────────────────────────────────
 OS="$(uname -s)"
@@ -52,38 +56,47 @@ fi
 
 # ── Role selection ────────────────────────────────────────────────────────────
 echo ""
-echo "  Now — choose your companion. They will fight alongside you in battle."
+echo "  Now — choose your companion. They will ride with you into battle."
 echo "  Or, you know, help you fix that bug you've been staring at for three hours."
 echo ""
-echo "  1. Chiron (pair programmer)"
-echo "     Son of Kronos, teacher of heroes. Trained Achilles, Jason, Asclepius."
-echo "     The man taught a demigod to fight and a mortal to heal the sick."
+echo "  1. Baldur (pair programmer)"
+echo "     Most beloved of all gods. Patient, wise, trusted by everyone in Asgard."
 echo "     He will not write your code for you — he will make sure you understand"
 echo "     every decision, call out bad patterns, and ask questions before charging in."
-echo "     Wise, patient, and annoyingly right most of the time."
+echo "     Annoyingly right most of the time. Nobody could hate Baldur."
 echo ""
-echo "  2. Athena (architect / reviewer)"
-echo "     Goddess of wisdom, strategy, and craftsmanship. She defeated Ares in battle."
-echo "     Twice. She is not here to teach you or implement for you — she is here to"
-echo "     look at your code from the outside and tell you what you don't want to hear."
-echo "     Architecture, technical debt, wrong abstractions — nothing gets past her."
+echo "  2. Tyr (architect / reviewer)"
+echo "     God of law and justice. He sacrificed his hand to bind the wolf Fenrir —"
+echo "     he knew exactly what it would cost and paid it anyway."
+echo "     He is not here to implement or teach. He reviews your code from the outside,"
+echo "     flags what will hurt you later, and will not let bad decisions through."
 echo ""
-echo "  3. Ares (implementer)"
-echo "     God of war. Passionate, fierce, and not exactly known for patience."
-echo "     His peers once trapped him in a bronze jar — he did not enjoy that."
-echo "     Point him at a task and get battle-ready code. Fast, direct, no detours."
-echo "     Just... give him clear instructions. For everyone's sake."
+echo "  3. Thor (implementer)"
+echo "     God of thunder. Direct, powerful, and not known for overthinking."
+echo "     Point him at a task and get battle-ready code. Fast, no detours."
+echo "     Just give him clear instructions. The hammer doesn't ask questions."
 echo ""
-prompt "Choose your companion (1, 2 or 3, default: 1): "
+echo "  4. Loki (chaos agent)"
+warn "Not recommended for production. You have been warned."
+echo "     Shapeshifter. Trickster. The god who always finds a third option."
+echo "     He will solve your problem — just not the way you expected."
+echo "     Creative, unconventional, occasionally brilliant, sometimes dangerous."
+echo "     Do not give him vague tasks. He will interpret them creatively."
+echo ""
+prompt "Choose your companion (1, 2, 3 or 4, default: 1): "
 read -r ROLE_CHOICE
 
 case "${ROLE_CHOICE:-1}" in
-  2) ROLE="athena"; ROLE_DISPLAY="Athena" ;;
-  3) ROLE="ares";   ROLE_DISPLAY="Ares" ;;
-  *) ROLE="chiron"; ROLE_DISPLAY="Chiron" ;;
+  2) ROLE="tyr";    ROLE_DISPLAY="Tyr" ;;
+  3) ROLE="thor";   ROLE_DISPLAY="Thor" ;;
+  4) ROLE="loki";   ROLE_DISPLAY="Loki"
+     echo ""
+     warn "You chose Loki. Bold. Review everything he gives you."
+     ;;
+  *) ROLE="baldur"; ROLE_DISPLAY="Baldur" ;;
 esac
 
-info "$ROLE_DISPLAY will be your companion"
+info "$ROLE_DISPLAY will ride with you"
 
 # ── Sessions dir ──────────────────────────────────────────────────────────────
 SESSIONS_DIR="$HOME/ai/sessions"
@@ -154,7 +167,6 @@ if [ "$PLATFORM" = "linux" ]; then
     VRAM_GB=$((VRAM / 1024))
     echo "  NVIDIA GPU detected — ${VRAM_GB}GB VRAM"
     if   [ "$VRAM_GB" -ge 24 ]; then RECOMMENDED_MODEL="qwen3-coder:30b";                   SAFE_MODEL="qwen2.5-coder:32b"
-    elif [ "$VRAM_GB" -ge 16 ]; then RECOMMENDED_MODEL="qwen2.5-coder:14b-instruct-q5_K_M"; SAFE_MODEL="qwen2.5-coder:14b-instruct-q4_K_M"
     elif [ "$VRAM_GB" -ge 12 ]; then RECOMMENDED_MODEL="qwen2.5-coder:14b-instruct-q5_K_M"; SAFE_MODEL="qwen2.5-coder:14b-instruct-q4_K_M"
     elif [ "$VRAM_GB" -ge 8  ]; then RECOMMENDED_MODEL="qwen2.5-coder:7b";                  SAFE_MODEL="qwen2.5-coder:7b"
     else                              RECOMMENDED_MODEL="qwen2.5-coder:3b";                  SAFE_MODEL="qwen2.5-coder:3b"
@@ -171,7 +183,6 @@ elif [ "$PLATFORM" = "macos" ]; then
   RAM=$(( $(sysctl -n hw.memsize) / 1024 / 1024 / 1024 ))
   if [[ "$(uname -m)" == "arm64" ]]; then
     echo "  Apple Silicon — unified memory: ${RAM}GB"
-    # Apple Silicon uses unified memory — GPU and RAM are the same pool
     if   [ "$RAM" -ge 48 ]; then RECOMMENDED_MODEL="qwen3-coder:30b";                   SAFE_MODEL="qwen2.5-coder:32b"
     elif [ "$RAM" -ge 32 ]; then RECOMMENDED_MODEL="qwen3-coder:30b";                   SAFE_MODEL="qwen2.5-coder:14b-instruct-q5_K_M"
     elif [ "$RAM" -ge 16 ]; then RECOMMENDED_MODEL="qwen2.5-coder:14b-instruct-q5_K_M"; SAFE_MODEL="qwen2.5-coder:14b-instruct-q4_K_M"
@@ -240,14 +251,22 @@ else
   info "aichat installed"
 fi
 
-mkdir -p "$HOME/.config/aichat/roles"
+# aichat config dir differs by platform
+if [ "$PLATFORM" = "macos" ]; then
+  AICHAT_CONFIG_DIR="$HOME/Library/Application Support/aichat"
+else
+  AICHAT_CONFIG_DIR="$HOME/.config/aichat"
+fi
+
+mkdir -p "$AICHAT_CONFIG_DIR/roles"
 
 # Copy all roles so the user can switch later
-cp "$SCRIPT_DIR/roles/chiron.md" "$HOME/.config/aichat/roles/chiron.md"
-cp "$SCRIPT_DIR/roles/athena.md" "$HOME/.config/aichat/roles/athena.md"
-cp "$SCRIPT_DIR/roles/ares.md"   "$HOME/.config/aichat/roles/ares.md"
+cp "$SCRIPT_DIR/roles/baldur.md" "$AICHAT_CONFIG_DIR/roles/baldur.md"
+cp "$SCRIPT_DIR/roles/tyr.md"    "$AICHAT_CONFIG_DIR/roles/tyr.md"
+cp "$SCRIPT_DIR/roles/thor.md"   "$AICHAT_CONFIG_DIR/roles/thor.md"
+cp "$SCRIPT_DIR/roles/loki.md"   "$AICHAT_CONFIG_DIR/roles/loki.md"
 
-cat > "$HOME/.config/aichat/config.yaml" << EOF
+cat > "$AICHAT_CONFIG_DIR/config.yaml" << EOF
 model: ollama:coder
 stream: true
 save: true
@@ -279,11 +298,11 @@ if grep -q "^${ASSISTANT_NAME_LOWER}()" "$SHELL_RC" 2>/dev/null; then
 fi
 
 if [ "$PLATFORM" = "linux" ]; then
-  START_CMD="sudo systemctl start ollama && echo '${ASSISTANT_NAME} is awake'"
-  STOP_CMD="sudo systemctl stop ollama && echo '${ASSISTANT_NAME} is resting'"
+  START_CMD="sudo systemctl start ollama && echo '${ASSISTANT_NAME} awakens'"
+  STOP_CMD="sudo systemctl stop ollama && echo '${ASSISTANT_NAME} returns to Asgard'"
 elif [ "$PLATFORM" = "macos" ]; then
-  START_CMD="ollama serve > /dev/null 2>&1 & echo '${ASSISTANT_NAME} is awake'"
-  STOP_CMD="pkill ollama && echo '${ASSISTANT_NAME} is resting'"
+  START_CMD="ollama serve > /dev/null 2>&1 & echo '${ASSISTANT_NAME} awakens'"
+  STOP_CMD="pkill ollama && echo '${ASSISTANT_NAME} returns to Asgard'"
 fi
 
 cat >> "$SHELL_RC" << EOF
@@ -291,14 +310,15 @@ cat >> "$SHELL_RC" << EOF
 # ${ASSISTANT_NAME}
 ${ASSISTANT_NAME_LOWER}() {
   case "\$1" in
-    start)   ${START_CMD} ;;
-    stop)    ${STOP_CMD} ;;
-    new)     aichat --role $ROLE ;;
-    list)    aichat --list-sessions ;;
-    chiron)  aichat --role chiron --session "\${2:-default}" ;;
-    athena)  aichat --role athena --session "\${2:-default}" ;;
-    ares)    aichat --role ares --session "\${2:-default}" ;;
-    *)       aichat --role $ROLE --session "\${1:-default}" ;;
+    start)  ${START_CMD} ;;
+    stop)   ${STOP_CMD} ;;
+    new)    aichat --role $ROLE ;;
+    list)   aichat --list-sessions ;;
+    baldur) aichat --role baldur --session "\${2:-default}" ;;
+    tyr)    aichat --role tyr    --session "\${2:-default}" ;;
+    thor)   aichat --role thor   --session "\${2:-default}" ;;
+    loki)   aichat --role loki   --session "\${2:-default}" ;;
+    *)      aichat --role $ROLE  --session "\${1:-default}" ;;
   esac
 }
 EOF
@@ -307,19 +327,20 @@ info "Shell function '${ASSISTANT_NAME_LOWER}' added to $SHELL_RC"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
-echo "  My work here is done. I have souls to guide and cattle to definitely not steal."
-echo "  $ROLE_DISPLAY awaits. Go build something worthy of the gods."
+echo "  My work here is done."
+echo "  $ROLE_DISPLAY is ready. Go build something worthy of the nine realms."
 echo "  (Or at least something that passes the tests. One step at a time.)"
 echo ""
 echo "  Reload your shell first:"
 echo "    source $SHELL_RC"
 echo ""
 echo "  Then:"
-echo "    ${ASSISTANT_NAME_LOWER} start            # wake up"
-echo "    ${ASSISTANT_NAME_LOWER} my-project       # start or resume a session"
-echo "    ${ASSISTANT_NAME_LOWER} chiron my-proj   # summon Chiron for this session"
-echo "    ${ASSISTANT_NAME_LOWER} athena my-proj   # summon Athena for this session"
-echo "    ${ASSISTANT_NAME_LOWER} ares my-proj     # summon Ares for this session"
-echo "    ${ASSISTANT_NAME_LOWER} list             # see all sessions"
-echo "    ${ASSISTANT_NAME_LOWER} stop             # rest"
+echo "    ${ASSISTANT_NAME_LOWER} start          # awaken"
+echo "    ${ASSISTANT_NAME_LOWER} my-project     # start or resume a session"
+echo "    ${ASSISTANT_NAME_LOWER} baldur my-proj # summon Baldur"
+echo "    ${ASSISTANT_NAME_LOWER} tyr my-proj    # summon Tyr"
+echo "    ${ASSISTANT_NAME_LOWER} thor my-proj   # summon Thor"
+echo "    ${ASSISTANT_NAME_LOWER} loki my-proj   # summon Loki (you were warned)"
+echo "    ${ASSISTANT_NAME_LOWER} list           # see all sessions"
+echo "    ${ASSISTANT_NAME_LOWER} stop           # return to Asgard"
 echo ""
