@@ -1,6 +1,12 @@
 #!/bin/bash
 
-AICHAT_CONFIG_DIR="${1:-$HOME/.config/aichat}"
+if [ -n "$1" ]; then
+  AICHAT_CONFIG_DIR="$1"
+elif [ "$(uname -s)" = "Darwin" ]; then
+  AICHAT_CONFIG_DIR="$HOME/Library/Application Support/aichat"
+else
+  AICHAT_CONFIG_DIR="$HOME/.config/aichat"
+fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROLES_DIR="$SCRIPT_DIR/roles"
 

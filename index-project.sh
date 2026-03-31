@@ -2,7 +2,13 @@
 # index-project.sh <aichat_config_dir> [rag_name]
 # Creates or rebuilds a RAG index for a project directory.
 
-AICHAT_CONFIG_DIR="${1:-$HOME/.config/aichat}"
+if [ -n "$1" ]; then
+  AICHAT_CONFIG_DIR="$1"
+elif [ "$(uname -s)" = "Darwin" ]; then
+  AICHAT_CONFIG_DIR="$HOME/Library/Application Support/aichat"
+else
+  AICHAT_CONFIG_DIR="$HOME/.config/aichat"
+fi
 RAG_NAME="$2"
 
 GREEN='\033[0;32m'
