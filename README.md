@@ -37,7 +37,7 @@ Run the setup once, pick your companion, and get to work.
 
 ## Install
 > [!IMPORTANT]
-> The model download can be **10–20GB** depending on your hardware. Make sure you're on a good connection and have time — this is a one-time step.
+> Setup downloads two models: the coding model (**10–20GB** depending on your hardware) and `nomic-embed-text` (~274MB) for RAG. Make sure you're on a good connection and have time — this is a one-time step.
 ```bash
 git clone https://github.com/danielsampar12/Odin.git ~/ai/odin
 cd ~/ai/odin
