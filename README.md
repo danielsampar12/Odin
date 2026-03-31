@@ -39,7 +39,7 @@ Run the setup once, pick your companion, and get to work.
 > [!IMPORTANT]
 > The model download can be **10–20GB** depending on your hardware. Make sure you're on a good connection and have time — this is a one-time step.
 ```bash
-git clone https://github.com/danielsampar12/Hermes.git ~/ai/odin
+git clone https://github.com/danielsampar12/Odin.git ~/ai/odin
 cd ~/ai/odin
 chmod +x setup.sh
 ./setup.sh
