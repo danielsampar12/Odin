@@ -9,7 +9,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-chmod +x "$SCRIPT_DIR/add-companion.sh" "$SCRIPT_DIR/uninstall.sh" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/add-companion.sh" "$SCRIPT_DIR/uninstall.sh" "$SCRIPT_DIR/index-project.sh" "$SCRIPT_DIR/launch-session.sh" "$SCRIPT_DIR/setup.sh" 2>/dev/null || true
 
 info()    { echo -e "${GREEN}  ✓${NC} $1"; }
 prompt()  { echo -e "${BLUE}  ?${NC} $1"; }
@@ -241,6 +241,10 @@ ollama create coder -f /tmp/coder.Modelfile
 rm /tmp/coder.Modelfile
 info "Model 'coder' created with $ROLE_DISPLAY's personality"
 
+echo "  Pulling embedding model for RAG (nomic-embed-text)..."
+ollama pull nomic-embed-text
+info "Embedding model ready"
+
 # ── aichat ────────────────────────────────────────────────────────────────────
 section "aichat"
 if command -v aichat &>/dev/null; then
@@ -275,9 +279,9 @@ cat > "$AICHAT_CONFIG_DIR/config.yaml" << EOF
 model: ollama:coder
 stream: true
 save: true
-repl_prelude: "Let's start a new session. Ask me about the project."
 save_session: true
 sessions_dir: $SESSIONS_DIR
+rag_embedding_model: ollama:nomic-embed-text
 
 clients:
   - type: openai-compatible
@@ -320,15 +324,30 @@ ${ASSISTANT_NAME_LOWER}() {
     new)    aichat --role $ROLE ;;
     list)   aichat --list-sessions ;;
     add)    bash "$SCRIPT_DIR/add-companion.sh" "$AICHAT_CONFIG_DIR" ;;
-    baldur) aichat --role baldur --session "\${2:-default}" ;;
-    tyr)    aichat --role tyr    --session "\${2:-default}" ;;
-    thor)   aichat --role thor   --session "\${2:-default}" ;;
-    loki)   aichat --role loki   --session "\${2:-default}" ;;
+    index)  bash "$SCRIPT_DIR/index-project.sh" "$AICHAT_CONFIG_DIR" "\$2" ;;
+    remove)
+      if [ -z "\$2" ]; then
+        echo "  Usage: ${ASSISTANT_NAME_LOWER} remove <session>"
+      elif [ -f "${AICHAT_CONFIG_DIR}/sessions/\${2}.yaml" ]; then
+        printf "  Remove session '\$2'? (y/N): "
+        read -r _ans
+        if [[ "\$_ans" =~ ^[Yy]\$ ]]; then
+          rm "${AICHAT_CONFIG_DIR}/sessions/\${2}.yaml"
+          echo "  Session '\$2' removed."
+        fi
+      else
+        echo "  Session '\$2' not found. Run '${ASSISTANT_NAME_LOWER} list' to see available sessions."
+      fi
+      ;;
+    baldur) bash "$SCRIPT_DIR/launch-session.sh" baldur "\${2:-default}" "$AICHAT_CONFIG_DIR" ;;
+    tyr)    bash "$SCRIPT_DIR/launch-session.sh" tyr    "\${2:-default}" "$AICHAT_CONFIG_DIR" ;;
+    thor)   bash "$SCRIPT_DIR/launch-session.sh" thor   "\${2:-default}" "$AICHAT_CONFIG_DIR" ;;
+    loki)   bash "$SCRIPT_DIR/launch-session.sh" loki   "\${2:-default}" "$AICHAT_CONFIG_DIR" ;;
     *)
       if [ -f "${AICHAT_CONFIG_DIR}/roles/\${1}.md" ]; then
-        aichat --role "\$1" --session "\${2:-default}"
+        bash "$SCRIPT_DIR/launch-session.sh" "\$1" "\${2:-default}" "$AICHAT_CONFIG_DIR"
       else
-        aichat --role $ROLE --session "\${1:-default}"
+        bash "$SCRIPT_DIR/launch-session.sh" $ROLE "\${1:-default}" "$AICHAT_CONFIG_DIR"
       fi
       ;;
   esac
@@ -353,7 +372,9 @@ echo "    ${ASSISTANT_NAME_LOWER} baldur my-proj # summon Baldur"
 echo "    ${ASSISTANT_NAME_LOWER} tyr my-proj    # summon Tyr"
 echo "    ${ASSISTANT_NAME_LOWER} thor my-proj   # summon Thor"
 echo "    ${ASSISTANT_NAME_LOWER} loki my-proj   # summon Loki (you were warned)"
-echo "    ${ASSISTANT_NAME_LOWER} list           # see all sessions"
-echo "    ${ASSISTANT_NAME_LOWER} add            # forge a new companion"
-echo "    ${ASSISTANT_NAME_LOWER} stop           # return to Asgard"
+echo "    ${ASSISTANT_NAME_LOWER} list             # see all sessions"
+echo "    ${ASSISTANT_NAME_LOWER} index my-proj   # index a project for RAG"
+echo "    ${ASSISTANT_NAME_LOWER} remove my-proj  # remove a session"
+echo "    ${ASSISTANT_NAME_LOWER} add             # forge a new companion"
+echo "    ${ASSISTANT_NAME_LOWER} stop            # return to Asgard"
 echo ""
