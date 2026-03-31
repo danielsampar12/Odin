@@ -95,7 +95,7 @@ Shapeshifter. Trickster. The god who always finds a third option nobody else con
 - **Explains:** why his approach works and what could go wrong — he's chaotic, not irresponsible
 
 > [!TIP]
-> You can override your default companion per session — see [Usage](#usage).
+> You can override your default companion per session.
 
 ## Usage
 
