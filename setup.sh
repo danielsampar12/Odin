@@ -97,7 +97,15 @@ case "${ROLE_CHOICE:-1}" in
   *) ROLE="baldur"; ROLE_DISPLAY="Baldur" ;;
 esac
 
-info "$ROLE_DISPLAY will ride with you"
+case "$ROLE" in
+  tyr)    TEMPERATURE=0.2 ;;
+  thor)   TEMPERATURE=0.2 ;;
+  loki)   TEMPERATURE=0.7 ;;
+  baldur) TEMPERATURE=0.5 ;;
+  *)      TEMPERATURE=0.5 ;;
+esac
+
+info "$ROLE_DISPLAY will ride with you (temperature: $TEMPERATURE)"
 
 # ── Sessions dir ──────────────────────────────────────────────────────────────
 SESSIONS_DIR="$HOME/ai/sessions"
@@ -229,7 +237,7 @@ info "Model pulled"
 SYSTEM_PROMPT=$(cat "$SCRIPT_DIR/roles/$ROLE.md")
 cat > /tmp/coder.Modelfile << EOF
 FROM $MODEL_NAME
-PARAMETER temperature 0.3
+PARAMETER temperature $TEMPERATURE
 PARAMETER num_ctx 32768
 PARAMETER num_predict 4096
 SYSTEM """
