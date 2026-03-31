@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ Odin
+# Odin
 
 <p>
   <img src="https://img.shields.io/badge/offline-100%25-brightgreen?style=flat-square" />
