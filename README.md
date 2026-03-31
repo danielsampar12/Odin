@@ -205,6 +205,8 @@ ollama rm <model-name>   # free up space
 ## Roadmap
 
 - [x] RAG support — `odin index my-project` indexes your codebase; detected automatically on session start
+- [ ] Smart VRAM fallback — detect OOM at runtime and automatically reload the session with the safe fallback model
+- [ ] Hardware-aware `num_ctx` — scale context window size based on detected VRAM/RAM tier (needs benchmarking)
 - [ ] Tune Thor, Tyr and Loki roles
 - [ ] Web search support — fetch docs and inject them into context on demand
 - [ ] Anything else
