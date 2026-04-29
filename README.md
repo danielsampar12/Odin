@@ -30,12 +30,33 @@ Odin sets up a fully offline AI companion that lives in your terminal. Your code
 
 Run the setup once, pick your companion, and get to work.
 
+## Odin v2
+
+Odin is evolving from a shell-based local LLM setup into a local-first AI stack manager.
+
+The v2 direction is:
+- `odin` becomes the control plane and launcher.
+- Ollama remains the local runtime.
+- OpenCode becomes the coding assistant.
+- MemPalace becomes the primary memory provider.
+- Powerlevel10k is the first shell-status target, with Starship later.
+- Companions remain part of Odin's identity and behavior layer.
+
+The repository now preserves both tracks:
+- `legacy/` contains the original shell implementation.
+- `cmd/odin` and `internal/` contain the new Go-based v2 CLI scaffold.
+
+See [docs/VISION.md](docs/VISION.md) and [docs/ROADMAP.md](docs/ROADMAP.md) for the v2 product direction.
+
 ## Requirements
 
 - **macOS or Linux**
 - [Homebrew](https://brew.sh) — required on macOS. On Linux the script handles everything without it.
 
 ## Install
+
+### Legacy shell setup
+
 > [!IMPORTANT]
 > Setup downloads two models: the coding model (**10–20GB** depending on your hardware) and `nomic-embed-text` (~274MB) for RAG. Make sure you're on a good connection and have time — this is a one-time step.
 ```bash
@@ -45,11 +66,28 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-The script will introduce itself, ask for a name, let you pick your companion, detect your hardware, pull the right model, and configure everything. Reload your shell when it's done:
+`./setup.sh` is now a repo-root wrapper that forwards to the preserved legacy implementation in `legacy/`.
+
+The legacy script will introduce itself, ask for a name, let you pick your companion, detect your hardware, pull the right model, and configure everything. Reload your shell when it's done:
 
 ```bash
 source ~/.zshrc  # or ~/.bashrc
 ```
+
+### Odin v2 CLI scaffold
+
+```bash
+go build -o odin ./cmd/odin
+./odin version
+./odin doctor
+```
+
+Current v2 commands are safe scaffolds:
+- `odin version`
+- `odin doctor`
+- `odin setup`
+- `odin init`
+- `odin start`
 
 ## Companions
 
@@ -203,6 +241,8 @@ ollama rm <model-name>   # free up space
 ```
 
 ## Roadmap
+
+For the v2 manager roadmap, see [docs/ROADMAP.md](docs/ROADMAP.md).
 
 - [x] RAG support — `odin index my-project` indexes your codebase; detected automatically on session start
 - [ ] Smart VRAM fallback — detect OOM at runtime and automatically reload the session with the safe fallback model

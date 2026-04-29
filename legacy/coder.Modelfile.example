@@ -1,0 +1,10 @@
+# Template — setup.sh generates this with the correct model for your hardware.
+# To manually rebuild: replace MODEL_NAME and run:
+#   ollama create coder -f coder.Modelfile
+#
+# The SYSTEM prompt is kept in roles/coder.md and injected by setup.sh.
+
+FROM MODEL_NAME
+PARAMETER temperature 0.3
+PARAMETER num_ctx 32768
+PARAMETER num_predict 4096
