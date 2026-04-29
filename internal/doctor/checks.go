@@ -24,6 +24,8 @@ func Collect(ctx context.Context, cwd string) (Result, error) {
 	inGitRepo, gitRoot := detectGitRepo(ctx, cwd, git.Installed)
 	globalConfigPath := config.GlobalConfigPath()
 	projectConfigPath := config.ProjectConfigPath(cwd)
+	ollamaBaseURL := config.ResolveGlobalRuntimeBaseURL(globalConfigPath, ollama.DefaultBaseURL)
+	ollamaAPI := ollama.Probe(ctx, ollamaBaseURL)
 
 	return Result{
 		CurrentDir: cwd,
@@ -43,6 +45,7 @@ func Collect(ctx context.Context, cwd string) (Result, error) {
 		},
 		Powerlevel10kConfigured: starshipPrompt.Powerlevel10kConfigured,
 		Powerlevel10kSource:     starshipPrompt.Powerlevel10kSource,
+		Ollama:                  ollamaAPI,
 		GlobalConfig: FileStatus{
 			Path:   globalConfigPath,
 			Exists: fileExists(globalConfigPath),

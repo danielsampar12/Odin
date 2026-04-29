@@ -2,6 +2,7 @@ package doctor
 
 import (
 	"github.com/danielsampar12/odin/internal/plugins"
+	ollamaplugin "github.com/danielsampar12/odin/internal/plugins/ollama"
 	"github.com/danielsampar12/odin/internal/system"
 )
 
@@ -21,6 +22,7 @@ type Result struct {
 	Tools                   map[string]plugins.Status
 	Powerlevel10kConfigured bool
 	Powerlevel10kSource     string
+	Ollama                  ollamaplugin.APIStatus
 	GlobalConfig            FileStatus
 	ProjectConfig           FileStatus
 }

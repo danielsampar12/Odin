@@ -7,6 +7,7 @@ import (
 	"github.com/danielsampar12/odin/internal/companions"
 	"github.com/danielsampar12/odin/internal/config"
 	"github.com/danielsampar12/odin/internal/doctor"
+	"github.com/danielsampar12/odin/internal/models"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +29,7 @@ func newInitCmd() *cobra.Command {
 			profile := detectProfileFromConfig(result)
 			companion := companions.DefaultForProfile(profile)
 			projectName := filepath.Base(cwd)
-			model, _ := recommendModels(result)
+			modelRecommendation := models.RecommendCodingModel(result.RAMGB, result.GPU)
 
 			projectDir := config.ProjectDir(cwd)
 			projectConfigPath := config.ProjectConfigPath(cwd)
@@ -46,7 +47,7 @@ func newInitCmd() *cobra.Command {
 				RuntimeProvider:  "ollama",
 				MemoryProvider:   "mempalace",
 				MemoryHall:       projectName,
-				ModelDefault:     model,
+				ModelDefault:     modelRecommendation.Recommended,
 				CompanionDefault: companion.Key,
 			}), 0o644)
 			if err != nil {

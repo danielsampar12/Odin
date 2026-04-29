@@ -61,6 +61,10 @@ func newDoctorCmd() *cobra.Command {
 			} else {
 				fmt.Fprintln(out, "- Powerlevel10k: not detected")
 			}
+			fmt.Fprintf(out, "- Ollama API: %s\n", ollamaAPIStatusLine(result.Ollama))
+			if result.Ollama.APIAvailable {
+				fmt.Fprintf(out, "- Ollama models: %s\n", summarizeModelNames(result.Ollama.Models, 5))
+			}
 
 			return nil
 		},

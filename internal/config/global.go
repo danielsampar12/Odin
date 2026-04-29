@@ -46,23 +46,20 @@ default = %q
 }
 
 func ReadGlobalProfile(path string) (string, error) {
-	body, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
+	return readQuotedConfigValue(path, "", "profile")
+}
+
+func ReadGlobalRuntimeBaseURL(path string) (string, error) {
+	return readQuotedConfigValue(path, "runtime", "base_url")
+}
+
+func ResolveGlobalRuntimeBaseURL(path, fallback string) string {
+	baseURL, err := ReadGlobalRuntimeBaseURL(path)
+	if err != nil || baseURL == "" {
+		return fallback
 	}
 
-	for _, line := range strings.Split(string(body), "\n") {
-		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "profile") {
-			continue
-		}
-
-		if value := quotedValue(line); value != "" {
-			return value, nil
-		}
-	}
-
-	return "", nil
+	return baseURL
 }
 
 func quotedValue(line string) string {
@@ -72,4 +69,42 @@ func quotedValue(line string) string {
 		return ""
 	}
 	return line[start+1 : end]
+}
+
+func readQuotedConfigValue(path, section, key string) (string, error) {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	currentSection := ""
+	for _, rawLine := range strings.Split(string(body), "\n") {
+		line := strings.TrimSpace(rawLine)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			currentSection = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "["), "]"))
+			continue
+		}
+
+		if section == "" {
+			if currentSection != "" {
+				continue
+			}
+		} else if currentSection != section {
+			continue
+		}
+
+		if !strings.HasPrefix(line, key) {
+			continue
+		}
+
+		if value := quotedValue(line); value != "" {
+			return value, nil
+		}
+	}
+
+	return "", nil
 }

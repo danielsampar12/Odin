@@ -6,6 +6,7 @@ import (
 	"github.com/danielsampar12/odin/internal/companions"
 	"github.com/danielsampar12/odin/internal/config"
 	"github.com/danielsampar12/odin/internal/doctor"
+	"github.com/danielsampar12/odin/internal/models"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +21,7 @@ type setupRecommendation struct {
 	ShellProvider  string
 	ShellEnabled   bool
 	RuntimeBaseURL string
+	Reason         string
 }
 
 func newSetupCmd() *cobra.Command {
@@ -84,6 +86,7 @@ func newSetupCmd() *cobra.Command {
 			fmt.Fprintf(out, "- Agent: %s\n", recommendation.Agent)
 			fmt.Fprintf(out, "- Memory: %s\n", recommendation.Memory)
 			fmt.Fprintf(out, "- Companion: %s\n", recommendation.CompanionName)
+			fmt.Fprintf(out, "- Why: %s\n", recommendation.Reason)
 			fmt.Fprintln(out)
 			fmt.Fprintln(out, "Global config:")
 			if dirCreated {
@@ -114,13 +117,13 @@ func newSetupCmd() *cobra.Command {
 func buildSetupRecommendation(result doctor.Result) setupRecommendation {
 	profile := detectProfile(result.CurrentDir, result.InGitRepo)
 	companion := companions.DefaultForProfile(profile)
-	model, fallback := recommendModels(result)
+	modelRecommendation := models.RecommendCodingModel(result.RAMGB, result.GPU)
 	shellProvider, shellEnabled := recommendShellProvider(result)
 
 	return setupRecommendation{
 		Profile:        profile,
-		Model:          model,
-		FallbackModel:  fallback,
+		Model:          modelRecommendation.Recommended,
+		FallbackModel:  modelRecommendation.Fallback,
 		Agent:          "OpenCode",
 		Memory:         "MemPalace",
 		CompanionKey:   companion.Key,
@@ -128,30 +131,7 @@ func buildSetupRecommendation(result doctor.Result) setupRecommendation {
 		ShellProvider:  shellProvider,
 		ShellEnabled:   shellEnabled,
 		RuntimeBaseURL: "http://localhost:11434",
-	}
-}
-
-func recommendModels(result doctor.Result) (string, string) {
-	if result.GPU.Detected {
-		switch {
-		case result.GPU.VRAMGB >= 20:
-			return "qwen3-coder:30b", "qwen2.5-coder:14b-instruct-q5_K_M"
-		case result.GPU.VRAMGB >= 12:
-			return "qwen2.5-coder:14b-instruct-q5_K_M", "qwen2.5-coder:7b"
-		case result.GPU.VRAMGB >= 8:
-			return "qwen2.5-coder:7b", "qwen2.5-coder:3b"
-		default:
-			return "qwen2.5-coder:3b", "qwen2.5-coder:3b"
-		}
-	}
-
-	switch {
-	case result.RAMGB >= 32:
-		return "qwen2.5-coder:14b-instruct-q5_K_M", "qwen2.5-coder:7b"
-	case result.RAMGB >= 16:
-		return "qwen2.5-coder:7b", "qwen2.5-coder:3b"
-	default:
-		return "qwen2.5-coder:3b", "qwen2.5-coder:3b"
+		Reason:         modelRecommendation.Reason,
 	}
 }
 
