@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -122,4 +123,18 @@ func printFileAction(writer io.Writer, path string, created bool) {
 	}
 
 	fmt.Fprintf(writer, "- Kept existing %s\n", displayPath(path))
+}
+
+func confirmAction(reader io.Reader, writer io.Writer, prompt string) (bool, error) {
+	if _, err := fmt.Fprint(writer, prompt); err != nil {
+		return false, err
+	}
+
+	line, err := bufio.NewReader(reader).ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return false, err
+	}
+
+	answer := strings.TrimSpace(strings.ToLower(line))
+	return answer == "y" || answer == "yes", nil
 }

@@ -32,11 +32,17 @@ func newInitCmd() *cobra.Command {
 			modelRecommendation := models.RecommendCodingModel(result.RAMGB, result.GPU)
 
 			projectDir := config.ProjectDir(cwd)
+			projectGeneratedDir := config.ProjectGeneratedDir(cwd)
 			projectConfigPath := config.ProjectConfigPath(cwd)
 			projectRulesPath := config.ProjectRulesPath(cwd)
 			agentsPath := config.ProjectAgentsPath(cwd)
 
 			dirCreated, err := ensureDir(projectDir)
+			if err != nil {
+				return err
+			}
+
+			generatedDirCreated, err := ensureDir(projectGeneratedDir)
 			if err != nil {
 				return err
 			}
@@ -77,6 +83,11 @@ func newInitCmd() *cobra.Command {
 				fmt.Fprintf(out, "- Created %s\n", displayPath(projectDir))
 			} else {
 				fmt.Fprintf(out, "- %s already exists\n", displayPath(projectDir))
+			}
+			if generatedDirCreated {
+				fmt.Fprintf(out, "- Created %s\n", displayPath(projectGeneratedDir))
+			} else {
+				fmt.Fprintf(out, "- %s already exists\n", displayPath(projectGeneratedDir))
 			}
 			printFileAction(out, projectConfigPath, projectConfigCreated)
 			printFileAction(out, projectRulesPath, projectRulesCreated)

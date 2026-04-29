@@ -49,8 +49,20 @@ func ReadGlobalProfile(path string) (string, error) {
 	return readQuotedConfigValue(path, "", "profile")
 }
 
+func ReadGlobalRuntimeProvider(path string) (string, error) {
+	return readQuotedConfigValue(path, "runtime", "provider")
+}
+
 func ReadGlobalRuntimeBaseURL(path string) (string, error) {
 	return readQuotedConfigValue(path, "runtime", "base_url")
+}
+
+func ReadGlobalModelDefault(path string) (string, error) {
+	return readQuotedConfigValue(path, "model", "default")
+}
+
+func ReadGlobalCompanionDefault(path string) (string, error) {
+	return readQuotedConfigValue(path, "companion", "default")
 }
 
 func ResolveGlobalRuntimeBaseURL(path, fallback string) string {

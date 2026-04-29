@@ -42,16 +42,24 @@ This project was initialized by Odin v2 for %s.
 - Prefer local-first and privacy-first defaults.
 - Treat OpenCode as the coding agent, Ollama as the runtime, and MemPalace as the primary memory provider.
 - Use %s as the default Odin companion unless the project decides otherwise.
+- Keep .odin/generated/ as Odin-managed generated output.
 `, projectName, companionName)
 }
 
 func DefaultAgents(projectName, companionName string) string {
 	return fmt.Sprintf(`# AGENTS
 
-This repository is scaffolded for Odin v2.
+Odin project marker: odin-v2
+
+This repository is scaffolded for Odin v2 and is intended to run local-first tooling.
 
 Project: %s
-Default Odin companion: %s
+Selected Odin companion: %s
+
+Project instructions:
+- Read .odin/rules.md alongside this file.
+- Keep Odin-generated files inspectable and project-local.
+- Prefer local runtimes and local models where possible.
 
 Intended stack:
 - Odin manages the local-first AI workstation experience for this project.
@@ -61,4 +69,16 @@ Intended stack:
 
 This file is intentionally small and inspectable.
 `, projectName, companionName)
+}
+
+func ReadProjectRuntimeProvider(path string) (string, error) {
+	return readQuotedConfigValue(path, "runtime", "provider")
+}
+
+func ReadProjectModelDefault(path string) (string, error) {
+	return readQuotedConfigValue(path, "model", "default")
+}
+
+func ReadProjectCompanionDefault(path string) (string, error) {
+	return readQuotedConfigValue(path, "companion", "default")
 }

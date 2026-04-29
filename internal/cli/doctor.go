@@ -44,16 +44,25 @@ func newDoctorCmd() *cobra.Command {
 			}
 			fmt.Fprintf(out, "- Global config: %s\n", fileStatusLabel(result.GlobalConfig.Path, result.GlobalConfig.Exists))
 			fmt.Fprintf(out, "- Project config: %s\n", fileStatusLabel(result.ProjectConfig.Path, result.ProjectConfig.Exists))
+			fmt.Fprintf(out, "- OpenCode generated config: %s\n", fileStatusLabel(result.OpenCodeGeneratedConfig.Path, result.OpenCodeGeneratedConfig.Exists))
 			fmt.Fprintln(out)
 			fmt.Fprintln(out, "Tooling")
 
 			for _, name := range []string{"git", "ollama", "opencode", "mempalace", "starship", "nvidia-smi"} {
 				tool := result.Tool(name)
+				fmt.Fprintf(out, "- %s: %s", tool.Name, installedLabel(tool.Installed))
 				if tool.Path != "" {
-					fmt.Fprintf(out, "- %s: %s (%s)\n", tool.Name, installedLabel(tool.Installed), tool.Path)
+					fmt.Fprintf(out, " (%s", tool.Path)
+					if tool.Details != "" {
+						fmt.Fprintf(out, ", %s", tool.Details)
+					}
+					fmt.Fprintln(out, ")")
 					continue
 				}
-				fmt.Fprintf(out, "- %s: %s\n", tool.Name, installedLabel(tool.Installed))
+				if tool.Details != "" {
+					fmt.Fprintf(out, " (%s)", tool.Details)
+				}
+				fmt.Fprintln(out)
 			}
 
 			if result.Powerlevel10kConfigured {

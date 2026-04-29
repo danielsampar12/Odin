@@ -29,8 +29,16 @@ func ProjectDir(cwd string) string {
 	return filepath.Join(cwd, ".odin")
 }
 
+func ProjectGeneratedDir(cwd string) string {
+	return filepath.Join(ProjectDir(cwd), "generated")
+}
+
 func ProjectConfigPath(cwd string) string {
 	return filepath.Join(ProjectDir(cwd), "config.toml")
+}
+
+func ProjectGeneratedOpenCodeConfigPath(cwd string) string {
+	return filepath.Join(ProjectGeneratedDir(cwd), "opencode.jsonc")
 }
 
 func ProjectRulesPath(cwd string) string {

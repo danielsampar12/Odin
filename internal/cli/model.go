@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/danielsampar12/odin/internal/config"
@@ -19,6 +20,7 @@ func newModelCmd() *cobra.Command {
 	cmd.AddCommand(
 		newModelListCmd(),
 		newModelRecommendCmd(),
+		newModelPullCmd(),
 	)
 
 	return cmd
@@ -103,4 +105,75 @@ func newModelRecommendCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newModelPullCmd() *cobra.Command {
+	var assumeYes bool
+
+	cmd := &cobra.Command{
+		Use:   "pull <name>",
+		Short: "Pull a local model into Ollama",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 {
+				return nil
+			}
+			cmd.PrintErrln("Error: expected exactly 1 model name argument")
+			return flag.ErrHelp
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			modelName := args[0]
+			globalConfigPath := config.GlobalConfigPath()
+			baseURL := config.ResolveGlobalRuntimeBaseURL(globalConfigPath, ollamaplugin.DefaultBaseURL)
+			apiStatus := ollamaplugin.Probe(cmd.Context(), baseURL)
+			out := cmd.OutOrStdout()
+
+			if !apiStatus.APIAvailable {
+				fmt.Fprintln(out, "Ollama API is not responding.")
+				if apiStatus.Error != "" {
+					fmt.Fprintf(out, "Details: %s\n", apiStatus.Error)
+				}
+				fmt.Fprintln(out, "Try starting Ollama and rerun this command.")
+				fmt.Fprintln(out, "If needed, the official CLI command to start the local server is `ollama serve`.")
+				return nil
+			}
+
+			if !assumeYes {
+				ok, err := confirmAction(
+					cmd.InOrStdin(),
+					out,
+					fmt.Sprintf("Pull model %q from %s? This may download many GB. [y/N]: ", modelName, apiStatus.BaseURL),
+				)
+				if err != nil {
+					return err
+				}
+				if !ok {
+					fmt.Fprintln(out)
+					fmt.Fprintln(out, "Cancelled.")
+					return nil
+				}
+				fmt.Fprintln(out)
+			}
+
+			fmt.Fprintf(out, "Pulling %s from %s\n", modelName, apiStatus.BaseURL)
+			fmt.Fprintln(out, "This may take a while.")
+
+			response, err := ollamaplugin.PullModel(cmd.Context(), baseURL, ollamaplugin.PullRequest{
+				Model: modelName,
+			})
+			if err != nil {
+				fmt.Fprintf(out, "Pull failed: %s\n", err)
+				return nil
+			}
+
+			if response.Status != "" {
+				fmt.Fprintf(out, "Pull complete: %s (%s)\n", modelName, response.Status)
+			} else {
+				fmt.Fprintf(out, "Pull complete: %s\n", modelName)
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "Pull without confirmation")
+	return cmd
 }

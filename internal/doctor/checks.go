@@ -24,6 +24,7 @@ func Collect(ctx context.Context, cwd string) (Result, error) {
 	inGitRepo, gitRoot := detectGitRepo(ctx, cwd, git.Installed)
 	globalConfigPath := config.GlobalConfigPath()
 	projectConfigPath := config.ProjectConfigPath(cwd)
+	openCodeConfigPath := config.ProjectGeneratedOpenCodeConfigPath(cwd)
 	ollamaBaseURL := config.ResolveGlobalRuntimeBaseURL(globalConfigPath, ollama.DefaultBaseURL)
 	ollamaAPI := ollama.Probe(ctx, ollamaBaseURL)
 
@@ -53,6 +54,10 @@ func Collect(ctx context.Context, cwd string) (Result, error) {
 		ProjectConfig: FileStatus{
 			Path:   projectConfigPath,
 			Exists: fileExists(projectConfigPath),
+		},
+		OpenCodeGeneratedConfig: FileStatus{
+			Path:   openCodeConfigPath,
+			Exists: fileExists(openCodeConfigPath),
 		},
 	}, nil
 }

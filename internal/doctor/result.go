@@ -25,6 +25,7 @@ type Result struct {
 	Ollama                  ollamaplugin.APIStatus
 	GlobalConfig            FileStatus
 	ProjectConfig           FileStatus
+	OpenCodeGeneratedConfig FileStatus
 }
 
 func (r Result) Tool(name string) plugins.Status {
