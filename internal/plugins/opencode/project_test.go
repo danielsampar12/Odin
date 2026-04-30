@@ -50,7 +50,7 @@ default = "baldur"
 		t.Fatal(err)
 	}
 
-	result, err := WriteGeneratedConfig(projectDir, false)
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{})
 	if err != nil {
 		t.Fatalf("WriteGeneratedConfig error = %v", err)
 	}
@@ -91,17 +91,62 @@ func TestWriteGeneratedConfigRefusesUnmanagedFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := WriteGeneratedConfig(projectDir, false)
+	_, err := WriteGeneratedConfig(projectDir, GenerateOptions{})
 	if !errors.Is(err, ErrUnmanagedGeneratedConfig) {
 		t.Fatalf("error = %v, want ErrUnmanagedGeneratedConfig", err)
 	}
 
-	result, err := WriteGeneratedConfig(projectDir, true)
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{Force: true})
 	if err != nil {
 		t.Fatalf("force WriteGeneratedConfig error = %v", err)
 	}
 	if !result.Written {
 		t.Fatalf("expected forced regeneration to write file")
+	}
+}
+
+func TestWriteGeneratedConfigWithMemory(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	projectDir := t.TempDir()
+	if err := os.MkdirAll(config.ProjectDir(projectDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(config.ProjectConfigPath(projectDir), []byte(`name = "demo"
+
+[runtime]
+provider = "ollama"
+
+[memory]
+provider = "mempalace"
+hall = "demo-hall"
+
+[model]
+default = "project-model"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{WithMemory: true})
+	if err != nil {
+		t.Fatalf("WriteGeneratedConfig error = %v", err)
+	}
+	if !result.Written {
+		t.Fatalf("expected config to be written")
+	}
+
+	body, err := os.ReadFile(config.ProjectGeneratedOpenCodeConfigPath(projectDir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(body)
+	if !strings.Contains(content, `// MemPalace MCP: enabled`) {
+		t.Fatalf("generated config is missing MemPalace marker: %s", content)
+	}
+	if !strings.Contains(content, `"mempalace"`) || !strings.Contains(content, `mempalace.mcp_server`) {
+		t.Fatalf("generated config is missing MemPalace MCP wiring: %s", content)
 	}
 }
 

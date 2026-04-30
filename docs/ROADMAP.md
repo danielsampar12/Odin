@@ -10,9 +10,13 @@ Delivered in the current scaffold:
 - introduced a Go module and Cobra-based CLI
 - added `odin version`
 - added read-only `odin doctor`
+- added `odin memory status` and `odin memory doctor`
 - added scaffolded `odin setup`
 - added scaffolded `odin init`
 - added scaffolded `odin start`
+- added Ollama model listing, recommendation, and pull scaffolds
+- added project-local OpenCode config generation
+- added a MemPalace detection and MCP-generation scaffold
 - added path helpers, config templates, companion defaults, and plugin detection stubs
 
 ## Near-term next steps
@@ -22,6 +26,7 @@ Delivered in the current scaffold:
 - detect Ollama API reachability, not just command presence
 - surface installed Ollama models
 - add clearer OpenCode and MemPalace capability checks
+- surface whether generated OpenCode config has explicit MemPalace MCP wiring
 - improve shell integration diagnostics for Powerlevel10k
 
 ### 2. Setup guidance
@@ -47,14 +52,29 @@ Delivered in the current scaffold:
 - refresh Odin status cache
 - launch OpenCode with generated config
 
-### 5. Companion management
+### 5. Memory integration
+
+- keep MemPalace as Odin's primary intended memory provider
+- support explicit OpenCode MCP wiring through project-local generated config
+- represent project memory halls in `.odin/config.toml`
+- keep Markdown or flat-file exports as fallback, debug, or backup paths only
+- shape memory namespaces around:
+  - `odin:user/preferences`
+  - `odin:user/hardware`
+  - `odin:project:<project>/architecture`
+  - `odin:project:<project>/decisions`
+  - `odin:project:<project>/sessions`
+  - `odin:companion:<name>/diary`
+  - `odin:companion:<name>/style`
+
+### 6. Companion management
 
 - add `odin companion list`
 - add `odin companion inspect`
 - add `odin companion install`
 - preserve compatibility with the existing role markdown files
 
-### 6. Model management
+### 7. Model management
 
 - add `odin model recommend`
 - add model pull and verify flows

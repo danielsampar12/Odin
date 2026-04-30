@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/danielsampar12/odin/internal/plugins"
 )
 
 func workingDir() (string, error) {
@@ -137,4 +139,40 @@ func confirmAction(reader io.Reader, writer io.Writer, prompt string) (bool, err
 
 	answer := strings.TrimSpace(strings.ToLower(line))
 	return answer == "y" || answer == "yes", nil
+}
+
+func printToolStatusLine(writer io.Writer, label string, tool plugins.Status) {
+	fmt.Fprintf(writer, "- %s: %s", label, installedLabel(tool.Installed))
+	if tool.Path != "" {
+		fmt.Fprintf(writer, " (%s", tool.Path)
+		if tool.Details != "" {
+			fmt.Fprintf(writer, ", %s", tool.Details)
+		}
+		fmt.Fprintln(writer, ")")
+		return
+	}
+	if tool.Details != "" {
+		fmt.Fprintf(writer, " (%s)", tool.Details)
+	}
+	fmt.Fprintln(writer)
+}
+
+func configValueOrUnset(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "not set"
+	}
+
+	return value
+}
+
+func derivedSuffix(derived bool) string {
+	if derived {
+		return " (derived)"
+	}
+
+	return ""
+}
+
+func joinCommand(parts []string) string {
+	return strings.Join(parts, " ")
 }

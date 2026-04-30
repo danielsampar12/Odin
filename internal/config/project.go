@@ -75,6 +75,14 @@ func ReadProjectRuntimeProvider(path string) (string, error) {
 	return readQuotedConfigValue(path, "runtime", "provider")
 }
 
+func ReadProjectMemoryProvider(path string) (string, error) {
+	return readQuotedConfigValue(path, "memory", "provider")
+}
+
+func ReadProjectMemoryHall(path string) (string, error) {
+	return readQuotedConfigValue(path, "memory", "hall")
+}
+
 func ReadProjectModelDefault(path string) (string, error) {
 	return readQuotedConfigValue(path, "model", "default")
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/danielsampar12/odin/internal/config"
+	mempalaceplugin "github.com/danielsampar12/odin/internal/plugins/mempalace"
 	ollamaplugin "github.com/danielsampar12/odin/internal/plugins/ollama"
 )
 
@@ -22,8 +23,15 @@ type ProjectScaffold struct {
 	RuntimeProvider     string
 	RuntimeBaseURL      string
 	OpenAICompatibleURL string
+	MemoryProvider      string
+	MemoryHall          string
 	Model               string
 	Companion           string
+}
+
+type GenerateOptions struct {
+	Force      bool
+	WithMemory bool
 }
 
 type WriteResult struct {
@@ -43,6 +51,19 @@ func ResolveProjectScaffold(cwd string) (ProjectScaffold, error) {
 	}
 	if value, err := config.ReadProjectRuntimeProvider(projectConfigPath); err == nil && value != "" {
 		runtimeProvider = value
+	}
+
+	memoryProvider := mempalaceplugin.ExpectedProvider
+	if value, err := config.ReadGlobalMemoryProvider(globalConfigPath); err == nil && value != "" {
+		memoryProvider = value
+	}
+	if value, err := config.ReadProjectMemoryProvider(projectConfigPath); err == nil && value != "" {
+		memoryProvider = value
+	}
+
+	memoryHall := mempalaceplugin.DeriveHall(cwd)
+	if value, err := config.ReadProjectMemoryHall(projectConfigPath); err == nil && value != "" {
+		memoryHall = value
 	}
 
 	modelName := "qwen2.5-coder:7b"
@@ -69,6 +90,8 @@ func ResolveProjectScaffold(cwd string) (ProjectScaffold, error) {
 		RuntimeProvider:     runtimeProvider,
 		RuntimeBaseURL:      baseURL,
 		OpenAICompatibleURL: ensureV1Endpoint(baseURL),
+		MemoryProvider:      memoryProvider,
+		MemoryHall:          memoryHall,
 		Model:               modelName,
 		Companion:           companion,
 	}, nil
@@ -82,7 +105,11 @@ func (s ProjectScaffold) ProviderModel() string {
 	return "ollama/" + s.Model
 }
 
-func (s ProjectScaffold) RenderJSONC() (string, error) {
+func (s ProjectScaffold) SupportsMemory() bool {
+	return strings.EqualFold(s.MemoryProvider, mempalaceplugin.ExpectedProvider)
+}
+
+func (s ProjectScaffold) RenderJSONC(options GenerateOptions) (string, error) {
 	payload := map[string]any{
 		"$schema": "https://opencode.ai/config.json",
 		"provider": map[string]any{
@@ -103,6 +130,22 @@ func (s ProjectScaffold) RenderJSONC() (string, error) {
 		"instructions": []string{"../rules.md"},
 	}
 
+	memoryComment := `// MemPalace MCP: not included by default. Re-run "odin opencode generate --with-memory" after verifying MemPalace is installed.`
+	if options.WithMemory {
+		if !s.SupportsMemory() {
+			return "", fmt.Errorf("memory provider %q is not supported for OpenCode MCP generation; expected %q", s.MemoryProvider, mempalaceplugin.ExpectedProvider)
+		}
+
+		payload["mcp"] = map[string]any{
+			"mempalace": map[string]any{
+				"type":    "local",
+				"command": mempalaceplugin.MCPCommand(),
+				"enabled": true,
+			},
+		}
+		memoryComment = `// MemPalace MCP: enabled via the documented local server command "python -m mempalace.mcp_server".`
+	}
+
 	body, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
 		return "", err
@@ -113,11 +156,14 @@ func (s ProjectScaffold) RenderJSONC() (string, error) {
 // Safe to regenerate with "odin opencode generate".
 // Selected companion: %s
 // Uses OPENCODE_CONFIG=%s when launching OpenCode.
+// Memory provider: %s
+// Memory hall: %s
 %s
-`, ManagedMarker, s.Companion, filepath.ToSlash(filepath.Join(".odin", "generated", "opencode.jsonc")), string(body)), nil
+%s
+`, ManagedMarker, s.Companion, filepath.ToSlash(filepath.Join(".odin", "generated", "opencode.jsonc")), s.MemoryProvider, s.MemoryHall, memoryComment, string(body)), nil
 }
 
-func WriteGeneratedConfig(cwd string, force bool) (WriteResult, error) {
+func WriteGeneratedConfig(cwd string, options GenerateOptions) (WriteResult, error) {
 	scaffold, err := ResolveProjectScaffold(cwd)
 	if err != nil {
 		return WriteResult{}, err
@@ -127,7 +173,7 @@ func WriteGeneratedConfig(cwd string, force bool) (WriteResult, error) {
 		return WriteResult{}, fmt.Errorf("unsupported runtime provider %q; OpenCode generation currently supports Ollama only", scaffold.RuntimeProvider)
 	}
 
-	content, err := scaffold.RenderJSONC()
+	content, err := scaffold.RenderJSONC(options)
 	if err != nil {
 		return WriteResult{}, err
 	}
@@ -140,7 +186,7 @@ func WriteGeneratedConfig(cwd string, force bool) (WriteResult, error) {
 	existing, err := os.ReadFile(scaffold.ConfigPath)
 	if err == nil {
 		result.OdinManaged = strings.Contains(string(existing), ManagedMarker)
-		if !force && !result.OdinManaged {
+		if !options.Force && !result.OdinManaged {
 			return result, ErrUnmanagedGeneratedConfig
 		}
 		result.Updated = true
@@ -157,10 +203,6 @@ func WriteGeneratedConfig(cwd string, force bool) (WriteResult, error) {
 
 	result.Written = true
 	return result, nil
-}
-
-func LaunchCommand() string {
-	return "OPENCODE_CONFIG=.odin/generated/opencode.jsonc opencode ."
 }
 
 func ensureV1Endpoint(baseURL string) string {

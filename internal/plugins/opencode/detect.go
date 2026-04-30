@@ -39,3 +39,7 @@ func Detect() plugins.Status {
 	result.Details = strings.TrimSpace(output)
 	return result
 }
+
+func Working(status plugins.Status) bool {
+	return status.Installed && !strings.HasPrefix(status.Details, "version check failed:")
+}

@@ -85,11 +85,14 @@ go build -o odin ./cmd/odin
 Current v2 commands are safe scaffolds:
 - `odin version`
 - `odin doctor`
+- `odin memory status`
+- `odin memory doctor`
 - `odin model list`
 - `odin model recommend`
 - `odin model pull <name> --yes`
 - `odin opencode status`
 - `odin opencode generate`
+- `odin opencode generate --with-memory`
 - `odin setup`
 - `odin init`
 - `odin start`

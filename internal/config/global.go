@@ -57,6 +57,10 @@ func ReadGlobalRuntimeBaseURL(path string) (string, error) {
 	return readQuotedConfigValue(path, "runtime", "base_url")
 }
 
+func ReadGlobalMemoryProvider(path string) (string, error) {
+	return readQuotedConfigValue(path, "memory", "provider")
+}
+
 func ReadGlobalModelDefault(path string) (string, error) {
 	return readQuotedConfigValue(path, "model", "default")
 }

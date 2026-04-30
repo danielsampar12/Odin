@@ -24,3 +24,13 @@ func DefaultForProfile(profile string) Companion {
 
 	return Companion{Key: "baldur", Name: "Baldur", Description: "Pragmatic pair programmer"}
 }
+
+func DisplayName(key string) string {
+	for _, companion := range Registry {
+		if strings.EqualFold(companion.Key, key) {
+			return companion.Name
+		}
+	}
+
+	return key
+}
