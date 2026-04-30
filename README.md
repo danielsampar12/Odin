@@ -93,6 +93,8 @@ Current v2 commands are safe scaffolds:
 - `odin opencode status`
 - `odin opencode generate`
 - `odin opencode generate --with-memory`
+- `odin setup --dry-run`
+- `odin setup --yes`
 - `odin setup`
 - `odin init`
 - `odin start`
