@@ -161,7 +161,7 @@ func executeGlobalConfigStep(plan Plan, step Step) (StepResult, error) {
 	}
 
 	globalConfigPath := config.GlobalConfigPath()
-	created, err := writeFileIfMissing(globalConfigPath, config.DefaultGlobalConfig(config.GlobalSettings{
+	created, err := config.WriteFileIfMissing(globalConfigPath, config.DefaultGlobalConfig(config.GlobalSettings{
 		Profile:          plan.Recommendation.Profile,
 		RuntimeProvider:  "ollama",
 		RuntimeBaseURL:   plan.Recommendation.RuntimeBaseURL,
@@ -351,16 +351,6 @@ func manualMessage(step Step) string {
 		parts = append(parts, step.Notes)
 	}
 	return strings.Join(parts, " ")
-}
-
-func writeFileIfMissing(path, content string, perm os.FileMode) (bool, error) {
-	if _, err := os.Stat(path); err == nil {
-		return false, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return false, err
-	}
-
-	return true, os.WriteFile(path, []byte(content), perm)
 }
 
 func displayPathForSetup(path string) string {

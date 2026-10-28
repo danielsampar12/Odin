@@ -90,7 +90,7 @@ odin setup             # writes ~/.odin/config.toml and runs the automatic steps
 Then, inside a repository:
 
 ```bash
-odin init                            # .odin/config.toml, .odin/rules.md, and AGENTS.md if missing
+odin init                            # .odin/config.toml and .odin/rules.md (--agents-md adds AGENTS.md)
 odin model recommend                 # the model that fits this machine
 odin model pull <recommended-model>  # skip if setup already pulled it
 odin opencode generate               # .odin/generated/opencode.jsonc for this machine
@@ -106,9 +106,9 @@ odin start --exec                    # validate everything, then launch OpenCode
 | `odin model recommend [--use-case agent\|chat]` | Recommends a model for this machine and the context size to run it at |
 | `odin model list` | Lists models installed in Ollama |
 | `odin model pull <name> [--yes]` | Pulls a model into Ollama |
-| `odin init` | Creates the project files; never overwrites existing ones |
-| `odin opencode generate [--force] [--with-memory]` | Writes the project-local OpenCode config; refuses to replace a file Odin did not generate unless `--force` |
-| `odin opencode status` | Shows the OpenCode integration for this project |
+| `odin init [--agents-md]` | Creates the project files; never overwrites existing ones |
+| `odin opencode generate [--force] [--with-memory]` | Writes the machine-local OpenCode config; refuses to replace a file Odin did not generate, or one edited by hand, unless `--force` |
+| `odin opencode status` | Shows whether the generated config is up to date, out of date or edited by hand, and where each OpenCode setting comes from |
 | `odin start [--exec]` | Validates the stack. With `--exec`, creates the context model if needed and launches OpenCode; exits non-zero if it cannot |
 | `odin memory status`, `odin memory doctor` | Inspects the optional MemPalace integration |
 | `odin version` | Prints the version |
@@ -117,15 +117,19 @@ odin start --exec                    # validate everything, then launch OpenCode
 
 | Path | Created by | Notes |
 |---|---|---|
-| `~/.odin/config.toml` | `odin setup` | Machine defaults: model, Ollama URL, companion |
-| `.odin/config.toml` | `odin init` | Project settings |
-| `.odin/rules.md` | `odin init` | Project instructions that OpenCode loads |
-| `AGENTS.md` | `odin init` | Only when the repository has none |
-| `.odin/generated/opencode.jsonc` | `odin opencode generate` | Machine-specific and safe to regenerate; keep it out of version control |
+| `~/.odin/config.toml` | `odin setup` | Machine settings: model, Ollama URL, default companion |
+| `.odin/config.toml` | `odin init` | Shared project settings (companion, memory); safe to commit. The model and Ollama URL are machine-specific and only come from `~/.odin/config.toml` |
+| `.odin/rules.md` | `odin init` | Project instructions that OpenCode loads; safe to commit |
+| `AGENTS.md` | `odin init --agents-md` | Only with the flag, and only when the repository has none |
+| `.odin/generated/opencode.jsonc` | `odin opencode generate` | Machine-specific: keep it out of version control (Odin prints the `.gitignore` line but never edits `.gitignore`). Its header holds a hash, so Odin can tell a stale file from a hand-edited one |
 | Ollama models | `odin setup`, `odin model pull` | The model weights (several GB each) |
 | Ollama models named `<model>-ctx16k` or `<model>-ctx32k` | `odin start --exec` | The same weights with a larger context; takes almost no extra disk |
 
-Odin does not edit your shell startup files, your global OpenCode config, or Ollama's server settings. When it launches OpenCode, it sets `OPENCODE_DISABLE_CLAUDE_CODE=1` so your global `~/.claude/CLAUDE.md` does not leak into the project.
+Odin does not edit your shell startup files, your `.gitignore`, your global OpenCode config, or Ollama's server settings. When it launches OpenCode, it sets `OPENCODE_DISABLE_CLAUDE_CODE=1` and `OPENCODE_DISABLE_EXTERNAL_SKILLS=1`, so your global `~/.claude/CLAUDE.md` and the skills in `~/.claude/skills` and `~/.agents/skills` do not leak into the project; skills in the project's `.opencode/skills/` still load.
+
+Put your own project-level OpenCode settings (permissions, extra instructions) in `opencode.json` at the repository root: OpenCode applies it after Odin's generated config. If it sets `model`, it overrides Odin's model, and `odin opencode status` warns about it.
+
+**Upgrading from v0.2:** Odin now ignores `[model]` and `[runtime] base_url` in `.odin/config.toml` (it warns until you delete them), and the first `odin start --exec` asks you to re-run `odin opencode generate`.
 
 ## Models
 

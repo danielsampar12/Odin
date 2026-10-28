@@ -10,6 +10,7 @@ import (
 	"github.com/danielsampar12/odin/internal/companions"
 	"github.com/danielsampar12/odin/internal/doctor"
 	"github.com/danielsampar12/odin/internal/models"
+	mempalaceplugin "github.com/danielsampar12/odin/internal/plugins/mempalace"
 	ollamaplugin "github.com/danielsampar12/odin/internal/plugins/ollama"
 	opencodeplugin "github.com/danielsampar12/odin/internal/plugins/opencode"
 	"github.com/spf13/cobra"
@@ -47,6 +48,8 @@ func newStartCmd() *cobra.Command {
 			out := cmd.OutOrStdout()
 			fmt.Fprintln(out, "Odin start")
 			fmt.Fprintln(out)
+			printWarnings(out, scaffold.Warnings)
+			printModelOverrides(out, opencodeplugin.Sources(cwd))
 			fmt.Fprintln(out, "Planned actions:")
 			fmt.Fprintf(out, "- Load global config: %s\n", fileStatusLabel(result.GlobalConfig.Path, result.GlobalConfig.Exists))
 			fmt.Fprintf(out, "- Load project config: %s\n", fileStatusLabel(result.ProjectConfig.Path, result.ProjectConfig.Exists))
@@ -102,8 +105,22 @@ func newStartCmd() *cobra.Command {
 				return fmt.Errorf("cannot launch OpenCode: fix the issues listed above")
 			}
 
-			if providerModel := scaffold.ProviderModel(numCtx); !opencodeplugin.GeneratedConfigUses(cwd, providerModel) {
-				return fmt.Errorf("generated OpenCode config does not use %s; re-run `odin opencode generate`", providerModel)
+			memoryStatus, err := mempalaceplugin.ResolveProjectStatus(cwd)
+			if err != nil {
+				return err
+			}
+			state, err := opencodeplugin.GeneratedConfigState(cwd, opencodeplugin.GenerateOptions{Context: numCtx, WithMemory: memoryStatus.OpenCodeMCPConfigured})
+			if err != nil {
+				return err
+			}
+			providerModel := scaffold.ProviderModel(numCtx)
+			switch {
+			case state == opencodeplugin.ConfigEdited && opencodeplugin.GeneratedConfigUses(cwd, providerModel):
+				fmt.Fprintf(out, "Warning: %s was edited by hand; launching it as it is.\n", displayPath(scaffold.ConfigPath))
+			case state == opencodeplugin.ConfigEdited:
+				return fmt.Errorf("%s was edited by hand and no longer uses %s; fix it or re-run `odin opencode generate --force`", displayPath(scaffold.ConfigPath), providerModel)
+			case state != opencodeplugin.ConfigUpToDate:
+				return fmt.Errorf("cannot launch OpenCode: %s", configStateHint(state))
 			}
 			if !ollamaModelInstalled(result.Ollama.Models, contextModel) {
 				if !ollamaModelInstalled(result.Ollama.Models, scaffold.Model) {

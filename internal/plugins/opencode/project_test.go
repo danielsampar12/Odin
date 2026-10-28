@@ -50,6 +50,17 @@ default = "baldur"
 		t.Fatal(err)
 	}
 
+	scaffold, err := ResolveProjectScaffold(projectDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scaffold.Model != "global-model" || scaffold.Companion != "baldur" {
+		t.Fatalf("model, companion = %q, %q; want the global model (D4) and the project companion", scaffold.Model, scaffold.Companion)
+	}
+	if len(scaffold.Warnings) != 1 || !strings.Contains(scaffold.Warnings[0], "[model] default") {
+		t.Fatalf("warnings = %q, want one about the ignored project model", scaffold.Warnings)
+	}
+
 	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 16384})
 	if err != nil {
 		t.Fatalf("WriteGeneratedConfig error = %v", err)
@@ -66,13 +77,13 @@ default = "baldur"
 	if !strings.Contains(content, ManagedMarker) {
 		t.Fatalf("generated config is missing managed marker")
 	}
-	if !strings.Contains(content, `"model": "ollama/project-model:latest-ctx16k"`) {
+	if !strings.Contains(content, `"model": "ollama/global-model:latest-ctx16k"`) {
 		t.Fatalf("generated config is missing the context model reference: %s", content)
 	}
 	if !strings.Contains(content, `"context": 16384`) || !strings.Contains(content, `"output": 4096`) {
 		t.Fatalf("generated config is missing the model context limit: %s", content)
 	}
-	if !GeneratedConfigUses(projectDir, "ollama/project-model:latest-ctx16k") || GeneratedConfigUses(projectDir, "ollama/project-model:latest-ctx32k") {
+	if !GeneratedConfigUses(projectDir, "ollama/global-model:latest-ctx16k") || GeneratedConfigUses(projectDir, "ollama/global-model:latest-ctx32k") {
 		t.Fatalf("GeneratedConfigUses does not match the generated model")
 	}
 	if !strings.Contains(content, `"baseURL": "http://localhost:11434/v1"`) {
@@ -153,6 +164,67 @@ default = "project-model"
 	}
 	if !strings.Contains(content, `"mempalace"`) || !strings.Contains(content, `mempalace.mcp_server`) {
 		t.Fatalf("generated config is missing MemPalace MCP wiring: %s", content)
+	}
+}
+
+func TestGeneratedConfigDrift(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	projectDir := t.TempDir()
+	path := config.ProjectGeneratedOpenCodeConfigPath(projectDir)
+	state := func(context int) ConfigState {
+		t.Helper()
+		got, err := GeneratedConfigState(projectDir, GenerateOptions{Context: context})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+
+	if got := state(16384); got != ConfigMissing {
+		t.Fatalf("state before generate = %v, want missing", got)
+	}
+	if _, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 16384}); err != nil {
+		t.Fatal(err)
+	}
+	if got := state(16384); got != ConfigUpToDate {
+		t.Fatalf("state after generate = %v, want up to date", got)
+	}
+	if got := state(32768); got != ConfigOutdated {
+		t.Fatalf("state for a new context size = %v, want out of date", got)
+	}
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 32768})
+	if err != nil || !result.Written || result.State != ConfigOutdated {
+		t.Fatalf("regenerate out-of-date config: result %+v, err %v; want it rewritten", result, err)
+	}
+
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	edited := strings.Replace(string(body), `"output": 8192`, `"output": 4096`, 1)
+	if err := os.WriteFile(path, []byte(edited), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := state(32768); got != ConfigEdited {
+		t.Fatalf("state after a hand edit = %v, want edited by hand", got)
+	}
+	if _, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 32768}); !errors.Is(err, ErrEditedGeneratedConfig) {
+		t.Fatalf("generate over a hand edit: err = %v, want ErrEditedGeneratedConfig", err)
+	}
+	if after, _ := os.ReadFile(path); string(after) != edited {
+		t.Fatalf("generate changed a hand-edited config without --force")
+	}
+	if _, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 32768, Force: true}); err != nil {
+		t.Fatalf("generate --force: %v", err)
+	}
+
+	// Odin v0.2 wrote the marker without a hash.
+	legacy := "// " + ManagedMarker + ".\n{}\n"
+	if err := os.WriteFile(path, []byte(legacy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := state(32768); got != ConfigOutdated {
+		t.Fatalf("state of a v0.2 config = %v, want out of date", got)
 	}
 }
 

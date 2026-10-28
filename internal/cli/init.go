@@ -7,12 +7,13 @@ import (
 	"github.com/danielsampar12/odin/internal/companions"
 	"github.com/danielsampar12/odin/internal/config"
 	"github.com/danielsampar12/odin/internal/doctor"
-	"github.com/danielsampar12/odin/internal/models"
 	"github.com/spf13/cobra"
 )
 
 func newInitCmd() *cobra.Command {
-	return &cobra.Command{
+	var agentsMD bool
+
+	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Scaffold Odin for the current project",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -26,10 +27,12 @@ func newInitCmd() *cobra.Command {
 				return err
 			}
 
-			profile := detectProfileFromConfig(result)
+			profile, err := detectProfileFromConfig(result)
+			if err != nil {
+				return err
+			}
 			companion := companions.DefaultForProfile(profile)
 			projectName := filepath.Base(cwd)
-			modelRecommendation := models.RecommendCodingModel(result.RAMGB, result.GPU)
 
 			projectDir := config.ProjectDir(cwd)
 			projectGeneratedDir := config.ProjectGeneratedDir(cwd)
@@ -47,27 +50,28 @@ func newInitCmd() *cobra.Command {
 				return err
 			}
 
-			projectConfigCreated, err := writeFileIfMissing(projectConfigPath, config.DefaultProjectConfig(config.ProjectSettings{
+			projectConfigCreated, err := config.WriteFileIfMissing(projectConfigPath, config.DefaultProjectConfig(config.ProjectSettings{
 				Name:             projectName,
 				AgentProvider:    "opencode",
 				RuntimeProvider:  "ollama",
 				MemoryProvider:   "none",
 				MemoryHall:       projectName,
-				ModelDefault:     modelRecommendation.Recommended,
 				CompanionDefault: companion.Key,
 			}), 0o644)
 			if err != nil {
 				return err
 			}
 
-			projectRulesCreated, err := writeFileIfMissing(projectRulesPath, config.DefaultRules(projectName, companion.Name), 0o644)
+			projectRulesCreated, err := config.WriteFileIfMissing(projectRulesPath, config.DefaultRules(projectName, companion.Name), 0o644)
 			if err != nil {
 				return err
 			}
 
-			agentsCreated, err := writeFileIfMissing(agentsPath, config.DefaultAgents(projectName, companion.Name), 0o644)
-			if err != nil {
-				return err
+			agentsCreated := false
+			if agentsMD {
+				if agentsCreated, err = config.WriteFileIfMissing(agentsPath, config.DefaultAgents(projectName, companion.Name), 0o644); err != nil {
+					return err
+				}
 			}
 
 			out := cmd.OutOrStdout()
@@ -91,23 +95,32 @@ func newInitCmd() *cobra.Command {
 			}
 			printFileAction(out, projectConfigPath, projectConfigCreated)
 			printFileAction(out, projectRulesPath, projectRulesCreated)
-			printFileAction(out, agentsPath, agentsCreated)
+			if agentsMD {
+				printFileAction(out, agentsPath, agentsCreated)
+			}
 			fmt.Fprintln(out)
 			fmt.Fprintf(out, "Default companion: %s\n", companion.Name)
 			fmt.Fprintln(out, "Memory: off by default. To opt in to MemPalace, set [memory] provider = \"mempalace\" in .odin/config.toml.")
+			printGitignoreHint(cmd.Context(), out, cwd)
+			if !result.GlobalConfig.Exists {
+				fmt.Fprintln(out, "No ~/.odin/config.toml yet: run `odin setup` so Odin picks a model for this machine.")
+			}
 
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&agentsMD, "agents-md", false, "Also create a repository-root AGENTS.md if there is none")
+	return cmd
 }
 
-func detectProfileFromConfig(result doctor.Result) string {
-	if result.GlobalConfig.Exists {
-		profile, err := config.ReadGlobalProfile(result.GlobalConfig.Path)
-		if err == nil && profile != "" {
-			return profile
-		}
+func detectProfileFromConfig(result doctor.Result) (string, error) {
+	global, err := config.Load(result.GlobalConfig.Path)
+	if err != nil {
+		return "", err
 	}
-
-	return detectProfile(result.CurrentDir, result.InGitRepo)
+	if global.Profile != "" {
+		return global.Profile, nil
+	}
+	return detectProfile(result.CurrentDir, result.InGitRepo), nil
 }

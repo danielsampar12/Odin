@@ -26,13 +26,15 @@ Updated 2026-10-28.
 
 Next: run the milestone with three testers before starting Stage 3.
 
-## Stage 2: repeatable project workflow
+## Stage 2: repeatable project workflow (done)
 
-- [ ] `odin init` creates `AGENTS.md` only when asked.
-- [ ] Config ownership: `.odin/config.toml` holds shared intent; machine-specific values (model, Ollama URL) come from `~/.odin/config.toml`.
-- [ ] Detect a hand-edited or stale generated config before regenerating.
-- [ ] Show where each effective OpenCode setting comes from (global OpenCode config, Odin's config, a project `opencode.json`).
-- [ ] Replace the hand-written config parser with a TOML library.
+- [x] `odin init` creates `AGENTS.md` only with `--agents-md`.
+- [x] Config ownership: `.odin/config.toml` holds shared intent (companion, memory); the model and Ollama URL come only from `~/.odin/config.toml`, and stale project keys are ignored with a warning. `.odin/generated/` is machine-local; Odin prints the `.gitignore` line but never edits the file.
+- [x] Drift: the generated config's header holds a content hash; `odin opencode status` reports up to date, out of date or edited by hand, and `generate` refuses to overwrite hand edits without `--force`.
+- [x] Provenance: `odin opencode status` lists the OpenCode configs in OpenCode's merge order (global, `OPENCODE_CONFIG`, project `opencode.json[c]`, `.opencode/`, `OPENCODE_CONFIG_CONTENT`; verified with `opencode debug config` on 1.19.4), the instruction files, and warns when a later config overrides the model.
+- [x] TOML library (BurntSushi/toml) instead of the hand-written parser; invalid TOML now fails with the file name.
+- [x] Launches also set `OPENCODE_DISABLE_EXTERNAL_SKILLS=1`: OpenCode otherwise lists every skill under `~/.claude/skills` and `~/.agents/skills` (~14k characters on the test machine) in each session's prompt.
+- [x] `odin model pull` and `odin model list` exit non-zero when Ollama is unreachable or a pull fails; pulling an installed model is a no-op.
 
 ## Stage 3: companions as OpenCode agents (after the milestone)
 

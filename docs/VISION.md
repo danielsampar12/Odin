@@ -67,7 +67,7 @@ This command is expected to:
 - detect the project and its stack
 - create `.odin/config.toml`
 - create `.odin/rules.md`
-- create `AGENTS.md` when the repository has none (planned: only when asked)
+- create `AGENTS.md` only when asked (`--agents-md`) and the repository has none
 - choose a project default companion
 - record a MemPalace hall when memory is enabled
 - prepare the project for `odin opencode generate`
