@@ -6,7 +6,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Version = "v0.2.0-dev"
+// Version is replaced with the release tag at build time:
+// -ldflags "-X github.com/danielsampar12/odin/internal/cli.Version=v0.2.0"
+var Version = "v0.2.0-dev"
 
 func newVersionCmd() *cobra.Command {
 	return &cobra.Command{

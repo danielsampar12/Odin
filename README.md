@@ -28,21 +28,34 @@
 Odin sets up and launches a local AI coding stack for a repository. [Ollama](https://ollama.com) runs the model, [OpenCode](https://opencode.ai) is the coding agent, and Odin handles the parts in between: it checks your machine, picks a model that fits it, writes project-local configuration, and launches OpenCode with a context large enough for OpenCode's prompt. Your code never leaves your machine.
 
 > [!NOTE]
-> This is **Odin v2**, a Go CLI under active development on the `v2` branch, with no tagged release yet. The original shell setup (Odin v1) is preserved in [`legacy/`](legacy/README.md).
+> This is **Odin v2**, a Go CLI under active development. The original shell setup (Odin v1) is preserved in [`legacy/`](legacy/README.md).
 
 ## Requirements
 
 - **Linux.** Tested on Ubuntu with an NVIDIA GPU. macOS should work but is untested, and `odin setup` only automates steps on Linux.
-- **[Go](https://go.dev/dl/) 1.25 or newer**, to build Odin until release binaries exist.
+- **[Go](https://go.dev/dl/) 1.25 or newer**, only if you install with Go or build from source.
 - **[Ollama](https://ollama.com/download)** and **[OpenCode](https://opencode.ai/docs/)** 1.x (tested with 1.19.4). Odin shows the install commands but does not install either for you.
 - **Disk space for one model:** 3–24 GB depending on your hardware (see [Models](#models)).
 
 ## Install
 
-Until the first release, build from source:
+**Release binary** (Linux and macOS, amd64 and arm64): download `odin_<version>_<os>_<arch>.tar.gz` from [Releases](https://github.com/danielsampar12/Odin/releases), check it against `checksums.txt`, and put `odin` on your `PATH`:
 
 ```bash
-git clone -b v2 https://github.com/danielsampar12/Odin.git
+tar -xzf odin_v0.2.0_linux_amd64.tar.gz
+mkdir -p ~/.local/bin && mv odin ~/.local/bin/
+```
+
+**With Go:**
+
+```bash
+go install github.com/danielsampar12/odin/cmd/odin@latest
+```
+
+**From source:**
+
+```bash
+git clone https://github.com/danielsampar12/Odin.git
 cd Odin
 go install ./cmd/odin
 ```
@@ -59,7 +72,7 @@ Then check:
 odin version
 ```
 
-**Upgrade:** run `git pull && go install ./cmd/odin` in the cloned repository.
+**Upgrade:** download the newer release, run the `go install …@latest` command again, or `git pull && go install ./cmd/odin` in your clone.
 
 > [!WARNING]
 > If you used Odin v1, its setup added an `odin()` function to `~/.zshrc` or `~/.bashrc`. That function hides the v2 binary. Run `command odin doctor` to bypass it: doctor names the file, and you can delete the `odin() { ... }` block and open a new shell.
