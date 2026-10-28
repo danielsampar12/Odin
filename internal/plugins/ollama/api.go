@@ -139,6 +139,48 @@ func PullModel(ctx context.Context, baseURL string, request PullRequest) (PullRe
 	return payload, nil
 }
 
+// ContextModelName names the derived model that runs base with a fixed context, e.g.
+// qwen3.5:9b-q4_K_M with 32768 -> qwen3.5:9b-q4_K_M-ctx32k.
+func ContextModelName(base string, numCtx int) string {
+	if !strings.Contains(base, ":") {
+		base += ":latest"
+	}
+	return fmt.Sprintf("%s-ctx%dk", base, numCtx/1024)
+}
+
+// CreateContextModel creates ContextModelName(base, numCtx) with num_ctx baked in. Ollama's
+// OpenAI-compatible endpoint, which OpenCode uses, cannot set num_ctx per request.
+func CreateContextModel(ctx context.Context, baseURL, base string, numCtx int) error {
+	body, err := json.Marshal(map[string]any{
+		"model":      ContextModelName(base, numCtx),
+		"from":       base,
+		"parameters": map[string]int{"num_ctx": numCtx},
+		"stream":     false,
+	})
+	if err != nil {
+		return err
+	}
+
+	requestCtx, cancel := context.WithTimeout(ctx, pullTimeout)
+	defer cancel()
+	httpRequest, err := http.NewRequestWithContext(requestCtx, http.MethodPost, apiURL(baseURL, "/create"), bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	httpRequest.Header.Set("Content-Type", "application/json")
+
+	response, err := (&http.Client{Timeout: pullTimeout}).Do(httpRequest)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return decodeAPIError(response)
+	}
+	return nil
+}
+
 func apiURL(baseURL, path string) string {
 	trimmed := strings.TrimRight(normalizeBaseURL(baseURL), "/")
 	if strings.HasSuffix(trimmed, "/api") {

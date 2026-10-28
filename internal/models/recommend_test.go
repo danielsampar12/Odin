@@ -95,3 +95,24 @@ func TestCatalogInvariants(t *testing.T) {
 		}
 	}
 }
+
+func TestContextFor(t *testing.T) {
+	testCases := []struct {
+		name  string
+		tag   string
+		ramGB int
+		gpu   system.GPUInfo
+		want  int
+	}{
+		{"catalog model that fits at 32k", "qwen3.5:9b-q4_K_M", 32, gpu12GB, 32768},
+		{"catalog model that only fits the minimum", "qwen3.5:4b-q4_K_M", 6, system.GPUInfo{}, 16384},
+		{"model outside the catalog", "qwen3:14b", 32, gpu12GB, 16384},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ContextFor(tc.tag, tc.ramGB, tc.gpu); got != tc.want {
+				t.Fatalf("ContextFor(%s) = %d, want %d", tc.tag, got, tc.want)
+			}
+		})
+	}
+}

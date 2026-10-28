@@ -121,6 +121,18 @@ func Recommend(ramGB int, gpu system.GPUInfo, useCase UseCase) Recommendation {
 	return rec
 }
 
+// ContextFor returns the context Odin runs an agent model with on this machine: 32k when the model
+// fits there, otherwise the 16k minimum OpenCode needs. Models outside the catalog get the minimum.
+func ContextFor(tag string, ramGB int, gpu system.GPUInfo) int {
+	budget, _ := memoryBudget(ramGB, gpu)
+	for _, m := range Catalog {
+		if m.Tag == tag && needGiB(m, agentRoomyContext, false) <= budget {
+			return agentRoomyContext
+		}
+	}
+	return agentContext
+}
+
 // suitable filters the catalog by use case and by speed on CPU-only machines.
 func suitable(m Model, useCase UseCase, cpuOnly bool) bool {
 	if useCase == UseCaseAgent && m.ToolCalls == ToolCallsBroken {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/danielsampar12/odin/internal/companions"
 	"github.com/danielsampar12/odin/internal/doctor"
+	"github.com/danielsampar12/odin/internal/models"
 	ollamaplugin "github.com/danielsampar12/odin/internal/plugins/ollama"
 	opencodeplugin "github.com/danielsampar12/odin/internal/plugins/opencode"
 	"github.com/spf13/cobra"
@@ -37,6 +38,12 @@ func newStartCmd() *cobra.Command {
 			}
 
 			opencodeTool := result.Tool("opencode")
+			numCtx := models.ContextFor(scaffold.Model, result.RAMGB, result.GPU)
+			contextModel := scaffold.ContextModel(numCtx)
+			contextModelLabel := "will be created on launch"
+			if ollamaModelInstalled(result.Ollama.Models, contextModel) {
+				contextModelLabel = "present"
+			}
 			out := cmd.OutOrStdout()
 			fmt.Fprintln(out, "Odin start")
 			fmt.Fprintln(out)
@@ -47,6 +54,7 @@ func newStartCmd() *cobra.Command {
 			fmt.Fprintf(out, "- Check MemPalace: %s\n", installedLabel(result.Tool("mempalace").Installed))
 			fmt.Fprintf(out, "- Check OpenCode: %s\n", installedLabel(opencodeTool.Installed))
 			fmt.Fprintf(out, "- Check generated OpenCode config: %s\n", fileStatusLabel(result.OpenCodeGeneratedConfig.Path, result.OpenCodeGeneratedConfig.Exists))
+			fmt.Fprintf(out, "- Context model: %s (num_ctx %d, %s)\n", contextModel, numCtx, contextModelLabel)
 			fmt.Fprintf(out, "- Planned launch command: %s\n", opencodeplugin.LaunchCommand(opencodeTool.Path))
 			fmt.Fprintln(out)
 			printStartSummary(out, cwd, scaffold, opencodeTool.Path)
@@ -92,6 +100,19 @@ func newStartCmd() *cobra.Command {
 				return nil
 			}
 
+			if providerModel := scaffold.ProviderModel(numCtx); !opencodeplugin.GeneratedConfigUses(cwd, providerModel) {
+				return fmt.Errorf("generated OpenCode config does not use %s; re-run `odin opencode generate`", providerModel)
+			}
+			if !ollamaModelInstalled(result.Ollama.Models, contextModel) {
+				if !ollamaModelInstalled(result.Ollama.Models, scaffold.Model) {
+					return fmt.Errorf("model %q is not installed; pull it with `odin model pull %s`", scaffold.Model, scaffold.Model)
+				}
+				fmt.Fprintf(out, "Creating Ollama model %s (%s with num_ctx %d).\n", contextModel, scaffold.Model, numCtx)
+				if err := ollamaplugin.CreateContextModel(cmd.Context(), result.Ollama.BaseURL, scaffold.Model, numCtx); err != nil {
+					return fmt.Errorf("create Ollama model %s: %w", contextModel, err)
+				}
+			}
+
 			fmt.Fprintln(out)
 			fmt.Fprintln(out, "Launching OpenCode now.")
 			return opencodeplugin.Launch(cmd.Context(), opencodeplugin.LaunchOptions{
@@ -126,7 +147,8 @@ func printStartSummary(writer io.Writer, cwd string, scaffold opencodeplugin.Pro
 
 func ollamaModelInstalled(models []ollamaplugin.Model, name string) bool {
 	for _, model := range models {
-		if model.Name == name {
+		// Ollama lists untagged names with an explicit :latest tag.
+		if model.Name == name || model.Name == name+":latest" {
 			return true
 		}
 	}

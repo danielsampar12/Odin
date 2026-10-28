@@ -22,9 +22,11 @@ comes from. Catalog data lives in `internal/models/catalog.go`; selection logic 
    cache, which needs server-wide Ollama settings (`OLLAMA_FLASH_ATTENTION=1`,
    `OLLAMA_KV_CACHE_TYPE=q8_0`), so Odin never makes it the default.
 
-Ollama's default context is 4096 on GPUs under ~24 GiB, which truncates OpenCode's prompt. The
-recommended context must be applied as `num_ctx` (for example via a Modelfile); Odin does not do
-this automatically yet.
+Ollama's default context is 4096 on GPUs under ~24 GiB, which truncates OpenCode's prompt, and
+its OpenAI-compatible endpoint cannot set `num_ctx` per request. So `odin opencode generate` points
+OpenCode at a derived model such as `qwen3.5:9b-q4_K_M-ctx32k` (32k when the model fits, otherwise
+16k) with a matching OpenCode context limit, and `odin start --exec` creates that derived model
+through Ollama's `/api/create` if it is missing.
 
 ## Catalog (verified 2026-10-28)
 

@@ -33,6 +33,7 @@ type ProjectScaffold struct {
 type GenerateOptions struct {
 	Force      bool
 	WithMemory bool
+	Context    int // num_ctx for the model; Odin runs it through a derived Ollama model with this context
 }
 
 type WriteResult struct {
@@ -102,8 +103,13 @@ func (s ProjectScaffold) Supported() bool {
 	return strings.EqualFold(s.RuntimeProvider, "ollama")
 }
 
-func (s ProjectScaffold) ProviderModel() string {
-	return "ollama/" + s.Model
+// ContextModel is the derived Ollama model that runs s.Model with numCtx tokens of context.
+func (s ProjectScaffold) ContextModel(numCtx int) string {
+	return ollamaplugin.ContextModelName(s.Model, numCtx)
+}
+
+func (s ProjectScaffold) ProviderModel(numCtx int) string {
+	return "ollama/" + s.ContextModel(numCtx)
 }
 
 func (s ProjectScaffold) SupportsMemory() bool {
@@ -121,14 +127,17 @@ func (s ProjectScaffold) RenderJSONC(options GenerateOptions) (string, error) {
 					"baseURL": s.OpenAICompatibleURL,
 				},
 				"models": map[string]any{
-					s.Model: map[string]any{
-						"name": s.Model,
+					s.ContextModel(options.Context): map[string]any{
+						"name": s.ContextModel(options.Context),
+						// Lets OpenCode compact the session before it outgrows num_ctx.
+						"limit": map[string]int{"context": options.Context, "output": options.Context / 4},
 					},
 				},
 			},
 		},
-		"model":        s.ProviderModel(),
-		"instructions": []string{"../rules.md"},
+		"model": s.ProviderModel(options.Context),
+		// OpenCode resolves instruction paths from the project root, not from this file.
+		"instructions": []string{".odin/rules.md"},
 	}
 
 	memoryComment := `// MemPalace MCP: not included by default. Re-run "odin opencode generate --with-memory" after verifying MemPalace is installed.`
@@ -156,12 +165,13 @@ func (s ProjectScaffold) RenderJSONC(options GenerateOptions) (string, error) {
 // Project-local OpenCode config scaffold for Odin.
 // Safe to regenerate with "odin opencode generate".
 // Selected companion: %s
+// Context: %d tokens via Ollama model %s (created by "odin start --exec").
 // Uses OPENCODE_CONFIG=%s when launching OpenCode.
 // Memory provider: %s
 // Memory hall: %s
 %s
 %s
-`, ManagedMarker, s.Companion, filepath.ToSlash(filepath.Join(".odin", "generated", "opencode.jsonc")), s.MemoryProvider, s.MemoryHall, memoryComment, string(body)), nil
+`, ManagedMarker, s.Companion, options.Context, s.ContextModel(options.Context), filepath.ToSlash(filepath.Join(".odin", "generated", "opencode.jsonc")), s.MemoryProvider, s.MemoryHall, memoryComment, string(body)), nil
 }
 
 func WriteGeneratedConfig(cwd string, options GenerateOptions) (WriteResult, error) {
@@ -172,6 +182,9 @@ func WriteGeneratedConfig(cwd string, options GenerateOptions) (WriteResult, err
 
 	if !scaffold.Supported() {
 		return WriteResult{}, fmt.Errorf("unsupported runtime provider %q; OpenCode generation currently supports Ollama only", scaffold.RuntimeProvider)
+	}
+	if options.Context <= 0 {
+		return WriteResult{}, errors.New("generate options must set a context size")
 	}
 
 	content, err := scaffold.RenderJSONC(options)
@@ -212,4 +225,10 @@ func ensureV1Endpoint(baseURL string) string {
 		return trimmed
 	}
 	return trimmed + "/v1"
+}
+
+// GeneratedConfigUses reports whether the generated config points OpenCode at providerModel.
+func GeneratedConfigUses(cwd, providerModel string) bool {
+	body, err := os.ReadFile(config.ProjectGeneratedOpenCodeConfigPath(cwd))
+	return err == nil && strings.Contains(string(body), `"model": "`+providerModel+`"`)
 }

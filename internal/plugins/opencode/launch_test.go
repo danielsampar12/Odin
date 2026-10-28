@@ -25,14 +25,21 @@ func TestBuildLaunchCommand(t *testing.T) {
 		t.Fatalf("command.Args = %#v, want binary plus '.'", command.Args)
 	}
 
-	found := false
-	for _, env := range command.Env {
-		if env == "OPENCODE_CONFIG=.odin/generated/opencode.jsonc" {
-			found = true
-			break
+	for _, want := range []string{"OPENCODE_CONFIG=.odin/generated/opencode.jsonc", "OPENCODE_DISABLE_CLAUDE_CODE=1"} {
+		found := false
+		for _, env := range command.Env {
+			found = found || env == want
+		}
+		if !found {
+			t.Fatalf("command.Env is missing %s: %#v", want, command.Env)
 		}
 	}
-	if !found {
-		t.Fatalf("command.Env is missing OPENCODE_CONFIG: %#v", command.Env)
+}
+
+func TestLaunchCommandDisablesClaudeCode(t *testing.T) {
+	got := LaunchCommand("")
+	want := "OPENCODE_CONFIG=" + RelativeConfigPath() + " OPENCODE_DISABLE_CLAUDE_CODE=1 opencode ."
+	if got != want {
+		t.Fatalf("LaunchCommand = %q, want %q", got, want)
 	}
 }

@@ -22,12 +22,16 @@ func RelativeConfigPath() string {
 	return filepath.Join(".odin", "generated", "opencode.jsonc")
 }
 
+// disableClaudeCode stops OpenCode from also loading ~/.claude/CLAUDE.md and other Claude Code files,
+// which otherwise leak user-global instructions into every Odin session.
+const disableClaudeCode = "OPENCODE_DISABLE_CLAUDE_CODE=1"
+
 func LaunchCommand(binaryPath string) string {
 	name := "opencode"
 	if binaryPath != "" {
 		name = binaryPath
 	}
-	return "OPENCODE_CONFIG=" + RelativeConfigPath() + " " + name + " ."
+	return "OPENCODE_CONFIG=" + RelativeConfigPath() + " " + disableClaudeCode + " " + name + " ."
 }
 
 func Launch(ctx context.Context, options LaunchOptions) error {
@@ -38,7 +42,7 @@ func Launch(ctx context.Context, options LaunchOptions) error {
 func buildLaunchCommand(ctx context.Context, options LaunchOptions) *exec.Cmd {
 	command := exec.CommandContext(ctx, options.BinaryPath, ".")
 	command.Dir = options.WorkingDir
-	command.Env = append(defaultEnv(options.Env), "OPENCODE_CONFIG="+options.ConfigPath)
+	command.Env = append(defaultEnv(options.Env), "OPENCODE_CONFIG="+options.ConfigPath, disableClaudeCode)
 	command.Stdin = valueOrReader(options.Stdin, os.Stdin)
 	command.Stdout = valueOrWriter(options.Stdout, os.Stdout)
 	command.Stderr = valueOrWriter(options.Stderr, os.Stderr)

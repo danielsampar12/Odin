@@ -6,9 +6,11 @@ import (
 
 	"github.com/danielsampar12/odin/internal/companions"
 	"github.com/danielsampar12/odin/internal/doctor"
+	"github.com/danielsampar12/odin/internal/models"
 	"github.com/danielsampar12/odin/internal/plugins"
 	mempalaceplugin "github.com/danielsampar12/odin/internal/plugins/mempalace"
 	opencodeplugin "github.com/danielsampar12/odin/internal/plugins/opencode"
+	"github.com/danielsampar12/odin/internal/system"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +60,9 @@ func newOpenCodeStatusCmd() *cobra.Command {
 			fmt.Fprintf(out, "Generated config: %s\n", fileStatusLabel(result.OpenCodeGeneratedConfig.Path, result.OpenCodeGeneratedConfig.Exists))
 			fmt.Fprintf(out, "Runtime provider: %s\n", scaffold.RuntimeProvider)
 			fmt.Fprintf(out, "Runtime base URL: %s\n", scaffold.RuntimeBaseURL)
-			fmt.Fprintf(out, "OpenCode provider/model: %s\n", scaffold.ProviderModel())
+			numCtx := models.ContextFor(scaffold.Model, result.RAMGB, result.GPU)
+			fmt.Fprintf(out, "OpenCode provider/model: %s\n", scaffold.ProviderModel(numCtx))
+			fmt.Fprintf(out, "Context: %d tokens\n", numCtx)
 			fmt.Fprintf(out, "Selected companion: %s\n", companions.DisplayName(scaffold.Companion))
 			fmt.Fprintf(out, "Memory provider: %s\n", scaffold.MemoryProvider)
 			fmt.Fprintf(out, "Memory hall: %s\n", scaffold.MemoryHall)
@@ -71,6 +75,8 @@ func newOpenCodeStatusCmd() *cobra.Command {
 			}
 			if !result.OpenCodeGeneratedConfig.Exists {
 				fmt.Fprintln(out, "Generated config is missing. Run `odin opencode generate`.")
+			} else if !opencodeplugin.GeneratedConfigUses(cwd, scaffold.ProviderModel(numCtx)) {
+				fmt.Fprintln(out, "Generated config does not match the current model or context. Re-run `odin opencode generate`.")
 			} else if !memoryStatus.OpenCodeMCPConfigured {
 				fmt.Fprintln(out, "MemPalace MCP is not wired into the generated config. Re-run `odin opencode generate --with-memory` to opt in.")
 			}
@@ -93,9 +99,16 @@ func newOpenCodeGenerateCmd() *cobra.Command {
 				return err
 			}
 
+			scaffold, err := opencodeplugin.ResolveProjectScaffold(cwd)
+			if err != nil {
+				return err
+			}
+			numCtx := models.ContextFor(scaffold.Model, system.DetectRAMGB(cmd.Context()), system.DetectGPU(cmd.Context()))
+
 			result, err := opencodeplugin.WriteGeneratedConfig(cwd, opencodeplugin.GenerateOptions{
 				Force:      force,
 				WithMemory: withMemory,
+				Context:    numCtx,
 			})
 			if err != nil {
 				if err == opencodeplugin.ErrUnmanagedGeneratedConfig {
@@ -106,11 +119,6 @@ func newOpenCodeGenerateCmd() *cobra.Command {
 			}
 
 			out := cmd.OutOrStdout()
-			scaffold, err := opencodeplugin.ResolveProjectScaffold(cwd)
-			if err != nil {
-				return err
-			}
-
 			if result.Written && result.Updated {
 				fmt.Fprintf(out, "Updated %s\n", displayPath(result.Path))
 			} else if result.Written {
@@ -118,7 +126,8 @@ func newOpenCodeGenerateCmd() *cobra.Command {
 			} else {
 				fmt.Fprintf(out, "Kept existing %s\n", displayPath(result.Path))
 			}
-			fmt.Fprintf(out, "OpenCode provider/model: %s\n", scaffold.ProviderModel())
+			fmt.Fprintf(out, "OpenCode provider/model: %s\n", scaffold.ProviderModel(numCtx))
+			fmt.Fprintf(out, "Context: %d tokens (`odin start --exec` creates Ollama model %s if it is missing)\n", numCtx, scaffold.ContextModel(numCtx))
 			fmt.Fprintf(out, "Selected companion: %s\n", companions.DisplayName(scaffold.Companion))
 			fmt.Fprintf(out, "Memory provider: %s\n", scaffold.MemoryProvider)
 			fmt.Fprintf(out, "Memory hall: %s\n", scaffold.MemoryHall)

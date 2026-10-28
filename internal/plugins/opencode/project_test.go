@@ -50,7 +50,7 @@ default = "baldur"
 		t.Fatal(err)
 	}
 
-	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{})
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 16384})
 	if err != nil {
 		t.Fatalf("WriteGeneratedConfig error = %v", err)
 	}
@@ -66,13 +66,19 @@ default = "baldur"
 	if !strings.Contains(content, ManagedMarker) {
 		t.Fatalf("generated config is missing managed marker")
 	}
-	if !strings.Contains(content, `"model": "ollama/project-model"`) {
-		t.Fatalf("generated config is missing provider/model reference: %s", content)
+	if !strings.Contains(content, `"model": "ollama/project-model:latest-ctx16k"`) {
+		t.Fatalf("generated config is missing the context model reference: %s", content)
+	}
+	if !strings.Contains(content, `"context": 16384`) || !strings.Contains(content, `"output": 4096`) {
+		t.Fatalf("generated config is missing the model context limit: %s", content)
+	}
+	if !GeneratedConfigUses(projectDir, "ollama/project-model:latest-ctx16k") || GeneratedConfigUses(projectDir, "ollama/project-model:latest-ctx32k") {
+		t.Fatalf("GeneratedConfigUses does not match the generated model")
 	}
 	if !strings.Contains(content, `"baseURL": "http://localhost:11434/v1"`) {
 		t.Fatalf("generated config is missing Ollama v1 base URL: %s", content)
 	}
-	if !strings.Contains(content, `"instructions": [`) || !strings.Contains(content, "../rules.md") {
+	if !strings.Contains(content, `"instructions": [`) || !strings.Contains(content, `".odin/rules.md"`) {
 		t.Fatalf("generated config is missing rules instruction reference: %s", content)
 	}
 }
@@ -91,12 +97,12 @@ func TestWriteGeneratedConfigRefusesUnmanagedFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := WriteGeneratedConfig(projectDir, GenerateOptions{})
+	_, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 16384})
 	if !errors.Is(err, ErrUnmanagedGeneratedConfig) {
 		t.Fatalf("error = %v, want ErrUnmanagedGeneratedConfig", err)
 	}
 
-	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{Force: true})
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{Force: true, Context: 16384})
 	if err != nil {
 		t.Fatalf("force WriteGeneratedConfig error = %v", err)
 	}
@@ -129,7 +135,7 @@ default = "project-model"
 		t.Fatal(err)
 	}
 
-	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{WithMemory: true})
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{WithMemory: true, Context: 16384})
 	if err != nil {
 		t.Fatalf("WriteGeneratedConfig error = %v", err)
 	}

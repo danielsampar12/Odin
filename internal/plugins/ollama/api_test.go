@@ -104,3 +104,41 @@ func TestPullModelError(t *testing.T) {
 		t.Fatalf("error = %q, want %q", err.Error(), "model not found")
 	}
 }
+
+func TestContextModelName(t *testing.T) {
+	testCases := map[string]string{
+		"qwen3.5:9b-q4_K_M": "qwen3.5:9b-q4_K_M-ctx32k",
+		"llama3.1":          "llama3.1:latest-ctx32k",
+	}
+	for base, want := range testCases {
+		if got := ContextModelName(base, 32768); got != want {
+			t.Fatalf("ContextModelName(%q) = %q, want %q", base, got, want)
+		}
+	}
+}
+
+func TestCreateContextModel(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodPost || request.URL.Path != "/api/create" {
+			t.Fatalf("got %s %s, want POST /api/create", request.Method, request.URL.Path)
+		}
+		var body struct {
+			Model      string         `json:"model"`
+			From       string         `json:"from"`
+			Parameters map[string]int `json:"parameters"`
+			Stream     bool           `json:"stream"`
+		}
+		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if body.Model != "qwen3.5:9b-q4_K_M-ctx16k" || body.From != "qwen3.5:9b-q4_K_M" || body.Parameters["num_ctx"] != 16384 || body.Stream {
+			t.Fatalf("unexpected create request: %+v", body)
+		}
+		_ = json.NewEncoder(writer).Encode(map[string]string{"status": "success"})
+	}))
+	defer server.Close()
+
+	if err := CreateContextModel(context.Background(), server.URL, "qwen3.5:9b-q4_K_M", 16384); err != nil {
+		t.Fatalf("CreateContextModel error = %v", err)
+	}
+}
