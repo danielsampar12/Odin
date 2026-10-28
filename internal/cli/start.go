@@ -97,7 +97,7 @@ func newStartCmd() *cobra.Command {
 			}
 
 			if !result.ProjectConfig.Exists || !result.OpenCodeGeneratedConfig.Exists || !result.Ollama.APIAvailable || !opencodeTool.Installed || !opencodeplugin.Working(opencodeTool) {
-				return nil
+				return fmt.Errorf("cannot launch OpenCode: fix the issues listed above")
 			}
 
 			if providerModel := scaffold.ProviderModel(numCtx); !opencodeplugin.GeneratedConfigUses(cwd, providerModel) {
