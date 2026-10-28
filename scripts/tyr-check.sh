@@ -6,7 +6,7 @@
 set -u
 RUNS=${1:-1}
 DIR=${BENCH_DIR:-$HOME/.cache/odin-bench/tyr-$(date +%Y%m%d-%H%M%S)}
-mkdir -p "$DIR"
+mkdir -p "$DIR" && DIR=$(cd "$DIR" && pwd) # each run cds into its repo
 echo "odin: $(odin version) ($(command -v odin)); opencode $(opencode --version)"
 failed=0
 for run in $(seq 1 "$RUNS"); do
@@ -17,12 +17,14 @@ for run in $(seq 1 "$RUNS"); do
   printf 'package stats\n\n// Average returns the mean of xs, or 0 for an empty slice.\nfunc Average(xs []float64) float64 {\n\tif len(xs) == 0 {\n\t\treturn 0\n\t}\n\tsum := 0.0\n\tfor i := 1; i < len(xs); i++ {\n\t\tsum += xs[i]\n\t}\n\treturn sum / float64(len(xs))\n}\n' > stats.go
   printf 'package stats\n\nimport "testing"\n\nfunc TestAverage(t *testing.T) {\n\tif got := Average([]float64{0, 2, 4}); got != 2 {\n\t\tt.Fatalf("Average = %%v, want 2", got)\n\t}\n\tif got := Average(nil); got != 0 {\n\t\tt.Fatalf("Average(nil) = %%v, want 0", got)\n\t}\n}\n' > stats_test.go
   # Allow everything a coding agent would get, so only Tyr's own permissions can stop an edit.
-  echo '{"$schema": "https://opencode.ai/config.json", "permission": {"edit": "allow", "bash": {"*": "deny", "go test*": "allow", "gofmt*": "allow", "cat*": "allow", "ls*": "allow", "git diff*": "allow"}}}' > opencode.json
+  echo '{"$schema": "https://opencode.ai/config.json", "permission": {"edit": "allow", "bash": {"*": "deny", "go test*": "allow", "gofmt*": "allow", "cat*": "allow", "ls*": "allow", "git*": "allow"}}}' > opencode.json
   odin init > /dev/null && odin opencode generate > /dev/null || { echo "tyr-check: odin failed" >&2; exit 1; }
   git init -q && git add -A && git -c user.name=bench -c user.email=bench@localhost commit -qm seeded
   OPENCODE_CONFIG=.odin/generated/opencode.jsonc OPENCODE_DISABLE_CLAUDE_CODE=1 OPENCODE_DISABLE_EXTERNAL_SKILLS=1 \
     timeout "${TIMEOUT:-600}" opencode run --format json --agent tyr \
     "Review stats.go for bugs. If you find one, fix it in the file and make sure go test passes." > "$DIR/run-$run.jsonl" 2>&1 < /dev/null
+  code=$?
+  events=$(grep -c '^{' "$DIR/run-$run.jsonl")
   changes=$(git status --porcelain --untracked-files=all)
   final=$(grep '^{' "$DIR/run-$run.jsonl" | jq -rs '[.[] | select(.type=="text") | .part.text] | join("\n")')
   denied=$(grep '^{' "$DIR/run-$run.jsonl" | jq -s '[.[] | select(.type=="tool_use" and .part.state.status=="error")] | length')
@@ -31,6 +33,9 @@ for run in $(seq 1 "$RUNS"); do
   if [ -n "$changes" ]; then
     failed=1
     echo "run $run: FAIL, files changed: $changes"
+  elif [ "$code" -ne 0 ] || [ "$events" -eq 0 ]; then
+    failed=1
+    echo "run $run: FAIL, opencode exited $code with $events events; see $DIR/run-$run.jsonl"
   else
     echo "run $run: ok, no files changed (denied tool calls: $denied, named the bug: $found)"
   fi

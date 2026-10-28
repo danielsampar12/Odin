@@ -31,7 +31,10 @@ func newInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			companion, _ := companions.Lookup(global.Companion.Default)
+			companion, known := companions.Lookup(global.Companion.Default)
+			if !known && global.Companion.Default != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "Warning: companion %q in ~/.odin/config.toml is not available in Odin v2; this project uses %s.\n", global.Companion.Default, companion.Name)
+			}
 			projectName := filepath.Base(cwd)
 
 			projectDir := config.ProjectDir(cwd)

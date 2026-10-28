@@ -211,14 +211,17 @@ func contentHash(content string) string {
 
 // classify compares existing generated content with what Odin would write now.
 func classify(existing, want string) ConfigState {
+	existing = strings.ReplaceAll(existing, "\r\n", "\n") // a CRLF checkout is not a hand edit
 	first, rest, _ := strings.Cut(existing, "\n")
 	if !strings.Contains(existing, ManagedMarker) {
 		return ConfigUnmanaged
 	}
 	_, hash, hashed := strings.Cut(first, "sha256:")
 	switch {
-	case !hashed:
+	case first == "// "+ManagedMarker+".":
 		return ConfigOutdated // written by Odin v0.2, which recorded no hash
+	case !hashed:
+		return ConfigEdited // the marker moved off the first line
 	case strings.TrimSpace(hash) != contentHash(rest):
 		return ConfigEdited
 	case existing != want:
@@ -275,12 +278,10 @@ func agents(sampling *models.Sampling) map[string]any {
 func AgentConfig(companion companions.Companion, sampling *models.Sampling) map[string]any {
 	permission := map[string]any{"task": "deny"}
 	if companion.ReadOnly {
-		// These rules come after the project's own permissions, and OpenCode applies the last match.
-		bash := map[string]string{"*": "deny"}
-		for _, command := range ReadOnlyCommands {
-			bash[command+"*"] = "allow"
-		}
-		permission = map[string]any{"edit": "deny", "task": "deny", "webfetch": "deny", "bash": bash}
+		// No shell at all: command patterns cannot keep a shell read-only (`git log --output=f`, `ls > f`,
+		// `go test -exec ...` all match an allow rule). Reading goes through OpenCode's read, grep and glob
+		// tools. These rules come after the project's own permissions, and OpenCode applies the last match.
+		permission = map[string]any{"edit": "deny", "bash": "deny", "task": "deny", "webfetch": "deny"}
 	}
 	entry := map[string]any{
 		"description": companion.Description,
@@ -293,10 +294,6 @@ func AgentConfig(companion companions.Companion, sampling *models.Sampling) map[
 	}
 	return entry
 }
-
-// ReadOnlyCommands are the shell commands a read-only companion may run (with any arguments). Reading
-// files goes through OpenCode's read/grep/glob tools; cat is left out because `cat > file` writes.
-var ReadOnlyCommands = []string{"git diff", "git log", "git show", "git status", "go test", "go vet", "ls"}
 
 func WriteGeneratedConfig(cwd string, options GenerateOptions) (WriteResult, error) {
 	scaffold, err := ResolveProjectScaffold(cwd)

@@ -41,7 +41,7 @@ Next: run the milestone with three testers before starting Stage 3.
 The plan put Stage 3 after the three-tester milestone; the maintainer chose to build it first. The milestone stays open.
 
 - [x] Baldur (default) and Tyr (reviewer) are OpenCode primary agents in the generated config, with prompts from `roles/*.md` embedded in the binary; `[companion] default` sets OpenCode's `default_agent`.
-- [x] Tyr cannot edit or write files, fetch URLs or start subagents, and its shell is limited to read-only commands. No companion may start subagents (no orchestration).
+- [x] Tyr cannot edit or write files, run shell commands, fetch URLs or start subagents; it reads through OpenCode's read, grep and glob tools. (An allowlist such as `git log*` or `ls*` still lets a shell write files.) No companion may start subagents (no orchestration).
 - [x] `odin companion list` and `odin companion show <name>`.
 - [x] Hephaestus, Freya, Thor and Loki are dropped from Odin v2 until they have agent definitions; a config that names one falls back to Baldur with a warning.
 - [x] `roles/baldur.md` is rewritten for agent work, because an agent prompt replaces OpenCode's built-in prompt. Odin v1 (`legacy/`) reads the same file.

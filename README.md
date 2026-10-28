@@ -157,7 +157,7 @@ Companions are OpenCode agents that `odin opencode generate` writes into the pro
 | Companion | What it does |
 |---|---|
 | **Baldur** (default) | Pair programmer: makes the changes you ask for, runs the tests, and explains tradeoffs |
-| **Tyr** | Reviewer: reads code and diffs, runs `go test`/`go vet` and reports problems. It cannot edit or write files, fetch URLs or start subagents, and its shell is limited to read-only commands |
+| **Tyr** | Reviewer: reads the code and reports problems with a suggested fix. It cannot edit or write files, run shell commands, fetch URLs or start subagents: shell patterns cannot keep a shell read-only, so it gets none |
 
 OpenCode starts on the companion set by `[companion] default` in `.odin/config.toml` (or `~/.odin/config.toml`); press Tab in OpenCode to switch, or use `opencode run --agent tyr`. `odin companion list` shows them and `odin companion show <name>` prints the exact agent config and prompt. A companion's prompt replaces OpenCode's built-in prompt for that agent; OpenCode's own `build` and `plan` agents stay available. After upgrading Odin, run `odin opencode generate` again: a changed prompt makes the generated config out of date.
 

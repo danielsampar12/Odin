@@ -219,6 +219,15 @@ func TestGeneratedConfigDrift(t *testing.T) {
 		t.Fatalf("generate --force: %v", err)
 	}
 
+	// A CRLF checkout of an untouched file is not a hand edit.
+	if got := classify(strings.ReplaceAll(string(body), "\n", "\r\n"), string(body)); got != ConfigUpToDate {
+		t.Fatalf("classify(CRLF copy) = %v, want up to date", got)
+	}
+	// A line added above the header moves the marker off line 1: that is a hand edit, not a v0.2 file.
+	if got := classify("// my note\n"+string(body), string(body)); got != ConfigEdited {
+		t.Fatalf("classify(line added above the header) = %v, want edited by hand", got)
+	}
+
 	// Odin v0.2 wrote the marker without a hash.
 	legacy := "// " + ManagedMarker + ".\n{}\n"
 	if err := os.WriteFile(path, []byte(legacy), 0o644); err != nil {
@@ -281,8 +290,8 @@ func TestGeneratedConfigHasCompanionAgents(t *testing.T) {
 	if baldur.Mode != "primary" || baldur.Prompt == "" || baldur.Permission["task"] != "deny" || baldur.Permission["edit"] != nil {
 		t.Fatalf("baldur agent = %+v", baldur)
 	}
-	if tyr.Permission["edit"] != "deny" || tyr.Permission["task"] != "deny" {
-		t.Fatalf("tyr must not edit files or start subagents: %+v", tyr.Permission)
+	if tyr.Permission["edit"] != "deny" || tyr.Permission["bash"] != "deny" || tyr.Permission["task"] != "deny" {
+		t.Fatalf("tyr must not edit files, run commands or start subagents: %+v", tyr.Permission)
 	}
 
 	if err := os.WriteFile(config.ProjectConfigPath(projectDir), []byte("[companion]\ndefault = \"freya\"\n"), 0o644); err != nil {

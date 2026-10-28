@@ -7,6 +7,7 @@ import (
 )
 
 type FileStatus struct {
+	Error  string // set when the file exists but cannot be parsed
 	Path   string
 	Exists bool
 }

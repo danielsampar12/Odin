@@ -166,7 +166,8 @@ func CreateContextModel(ctx context.Context, baseURL, base string, numCtx int, e
 		return err
 	}
 
-	requestCtx, cancel := context.WithTimeout(ctx, pullTimeout)
+	// Creating from an installed model only writes a manifest, so a long wait means Ollama is stuck.
+	requestCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	httpRequest, err := http.NewRequestWithContext(requestCtx, http.MethodPost, apiURL(baseURL, "/create"), bytes.NewReader(body))
 	if err != nil {
@@ -174,7 +175,7 @@ func CreateContextModel(ctx context.Context, baseURL, base string, numCtx int, e
 	}
 	httpRequest.Header.Set("Content-Type", "application/json")
 
-	response, err := (&http.Client{Timeout: pullTimeout}).Do(httpRequest)
+	response, err := http.DefaultClient.Do(httpRequest)
 	if err != nil {
 		return err
 	}

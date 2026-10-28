@@ -11,13 +11,13 @@ type Companion struct {
 	Key         string
 	Name        string
 	Description string
-	ReadOnly    bool // cannot edit files, run arbitrary commands or hand work to subagents
+	ReadOnly    bool // cannot edit files, run commands or hand work to subagents
 }
 
 // Registry lists the companions in the order `odin companion list` shows them; the first is the default.
 var Registry = []Companion{
 	{Key: "baldur", Name: "Baldur", Description: "Pair programmer: makes the changes you ask for, runs the tests and explains tradeoffs"},
-	{Key: "tyr", Name: "Tyr", Description: "Reviewer: reads code and diffs, runs tests and reports problems; cannot edit files", ReadOnly: true},
+	{Key: "tyr", Name: "Tyr", Description: "Reviewer: reads the code and reports problems; cannot edit files or run commands", ReadOnly: true},
 }
 
 func Default() Companion {

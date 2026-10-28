@@ -46,7 +46,7 @@ fi
 git -C "$EXERCISM_DIR" cat-file -e "$EXERCISM_COMMIT" 2>/dev/null || git -C "$EXERCISM_DIR" fetch -q origin || exit 1
 git -C "$EXERCISM_DIR" -c advice.detachedHead=false checkout -q "$EXERCISM_COMMIT" || exit 1
 
-mkdir -p "$BENCH_DIR"
+mkdir -p "$BENCH_DIR" && BENCH_DIR=$(cd "$BENCH_DIR" && pwd) && OUT="$BENCH_DIR/results.tsv" # runs cd into each repo
 echo "odin: $(odin version) ($(command -v odin)); opencode $(opencode --version); agent: ${AGENT:-default}" | tee "$BENCH_DIR/versions.txt"
 [ -f "$OUT" ] || printf 'task\trun\tpass\tseconds\texit\ttools\ttool_errors\ttests_edited\tclaimed_pass\tfalse_claim\tprocessor\tcontext\tstarted\n' > "$OUT"
 # One model on the GPU at a time: unload whatever another config left loaded.
@@ -169,7 +169,8 @@ run_one() { # task run
   # Score against the original tests: an agent that edits a test file gets it restored first.
   if [ "$task" != slugify ]; then
     git diff --quiet HEAD -- '*_test.go' || edited=yes
-    git checkout -q HEAD -- '*_test.go'
+    [ -z "$(git ls-files -o -- '*_test.go')" ] || edited=yes # an added test file could exit 0 from TestMain
+    git checkout -q HEAD -- '*_test.go' && git clean -fq -- '*_test.go'
   fi
   if [ "$task" = slugify ]; then
     [ -f slug.go ] && [ -f slug_test.go ] && timeout 300 go test ./... > "$BENCH_DIR/$task-$run.gotest.txt" 2>&1 && pass=yes
