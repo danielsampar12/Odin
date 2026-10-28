@@ -213,7 +213,9 @@ Removes Ollama, aichat, configs, and the shell function. Asks before touching mo
 <details>
 <summary>Model recommendations by hardware</summary>
 
-The setup script auto-detects your hardware and recommends the best model.
+The legacy setup script auto-detects your hardware and recommends the best model from this table.
+The v2 CLI (`odin model recommend`) uses a newer catalog instead: see [docs/MODEL_CATALOG.md](docs/MODEL_CATALOG.md).
+In Odin's 2026-10 measurements, qwen2.5-coder could not drive OpenCode's tool calls.
 
 | Hardware | Recommended | Safe fallback |
 |---|---|---|

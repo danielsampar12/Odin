@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/danielsampar12/odin/internal/config"
+	"github.com/danielsampar12/odin/internal/models"
 	mempalaceplugin "github.com/danielsampar12/odin/internal/plugins/mempalace"
 	ollamaplugin "github.com/danielsampar12/odin/internal/plugins/ollama"
 )
@@ -66,7 +67,7 @@ func ResolveProjectScaffold(cwd string) (ProjectScaffold, error) {
 		memoryHall = value
 	}
 
-	modelName := "qwen2.5-coder:7b"
+	modelName := models.DefaultAgentModel
 	if value, err := config.ReadGlobalModelDefault(globalConfigPath); err == nil && value != "" {
 		modelName = value
 	}

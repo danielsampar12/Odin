@@ -7,91 +7,91 @@ import (
 	"github.com/danielsampar12/odin/internal/system"
 )
 
-func TestRecommendCodingModel(t *testing.T) {
+// Hardware profiles from the 2026-10-28 model research; expectations follow its per-profile table
+// where the catalog has the same entries.
+func TestRecommendScenarios(t *testing.T) {
+	apple := system.GPUInfo{AppleSilicon: true}
+	nvidia := func(vram int) system.GPUInfo { return system.GPUInfo{Detected: true, VRAMGB: vram} }
+
 	testCases := []struct {
-		name            string
-		ramGB           int
-		gpu             system.GPUInfo
-		wantModel       string
-		wantFallback    string
-		reasonSubstring string
+		name         string
+		ramGB        int
+		gpu          system.GPUInfo
+		useCase      UseCase
+		wantModel    string
+		wantFallback string
+		wantOptional string
+		wantContext  int
+		wantReason   string
 	}{
-		{
-			name:            "cpu only low ram",
-			ramGB:           8,
-			wantModel:       "qwen2.5-coder:3b",
-			wantFallback:    "qwen2.5-coder:3b",
-			reasonSubstring: "lightest coding model tier",
-		},
-		{
-			name:            "cpu only medium ram",
-			ramGB:           16,
-			wantModel:       "qwen2.5-coder:7b",
-			wantFallback:    "qwen2.5-coder:3b",
-			reasonSubstring: "slower CPU inference",
-		},
-		{
-			name:            "gpu around 8gb",
-			ramGB:           32,
-			gpu:             system.GPUInfo{Detected: true, VRAMGB: 8},
-			wantModel:       "qwen2.5-coder:7b",
-			wantFallback:    "qwen2.5-coder:3b",
-			reasonSubstring: "7B tier",
-		},
-		{
-			name:            "gpu around 12gb",
-			ramGB:           32,
-			gpu:             system.GPUInfo{Detected: true, VRAMGB: 12},
-			wantModel:       "qwen2.5-coder:14b-instruct-q5_K_M",
-			wantFallback:    "qwen2.5-coder:7b",
-			reasonSubstring: "14B Qwen coder tier",
-		},
-		{
-			name:            "gpu large",
-			ramGB:           64,
-			gpu:             system.GPUInfo{Detected: true, VRAMGB: 24},
-			wantModel:       "qwen3-coder:30b",
-			wantFallback:    "qwen2.5-coder:14b-instruct-q5_K_M",
-			reasonSubstring: "larger coding-model tier",
-		},
-		{
-			name:            "apple silicon 16gb",
-			ramGB:           16,
-			gpu:             system.GPUInfo{AppleSilicon: true},
-			wantModel:       "qwen2.5-coder:7b",
-			wantFallback:    "qwen2.5-coder:3b",
-			reasonSubstring: "Apple Silicon",
-		},
-		{
-			name:            "apple silicon 32gb",
-			ramGB:           32,
-			gpu:             system.GPUInfo{AppleSilicon: true},
-			wantModel:       "qwen2.5-coder:14b-instruct-q5_K_M",
-			wantFallback:    "qwen2.5-coder:7b",
-			reasonSubstring: "unified memory",
-		},
-		{
-			name:            "apple silicon 48gb",
-			ramGB:           48,
-			gpu:             system.GPUInfo{AppleSilicon: true},
-			wantModel:       "qwen3-coder:30b",
-			wantFallback:    "qwen2.5-coder:14b-instruct-q5_K_M",
-			reasonSubstring: "largest coding-model tier",
-		},
+		{"cpu only 8gb", 8, system.GPUInfo{}, UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "minutes per agent turn"},
+		{"cpu only 6gb keeps the minimum context", 6, system.GPUInfo{}, UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 16384, "fits with 16384 tokens"},
+		{"cpu only 16gb", 16, system.GPUInfo{}, UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "No dedicated GPU"},
+		{"cpu only 32gb picks 3b-active moe", 32, system.GPUInfo{}, UseCaseAgent, "qwen3.5:35b-a3b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "no verified model is suitable"},
+		{"nvidia 8gb", 32, nvidia(8), UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "qwen3.5:9b-q4_K_M", 32768, "not verified"},
+		{"nvidia 12gb", 32, nvidia(12), UseCaseAgent, "qwen3.5:9b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "Measured by Odin"},
+		{"nvidia 16gb", 32, nvidia(16), UseCaseAgent, "qwen3.5:9b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "NVIDIA GPU with about 16GB"},
+		{"nvidia 24gb", 64, nvidia(24), UseCaseAgent, "qwen3.6:27b-q4_K_M", "qwen3.5:9b-q4_K_M", "", 32768, "measured fallback"},
+		{"apple 16gb", 16, apple, UseCaseAgent, "qwen3.5:9b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "Apple Silicon"},
+		{"apple 32gb", 32, apple, UseCaseAgent, "qwen3.6:27b-q4_K_M", "qwen3.5:9b-q4_K_M", "", 32768, "unified memory"},
+		{"apple 48gb", 48, apple, UseCaseAgent, "qwen3.6:27b-q4_K_M", "qwen3.5:9b-q4_K_M", "", 32768, "measured fallback"},
+		{"chat nvidia 16gb allows a tool-broken model", 32, nvidia(16), UseCaseChat, "gpt-oss:20b", "qwen3.5:9b-q4_K_M", "", 8192, "fits with 8192 tokens"},
+		{"chat cpu only 32gb", 32, system.GPUInfo{}, UseCaseChat, "qwen3.5:35b-a3b-q4_K_M", "gpt-oss:20b", "", 8192, "No dedicated GPU"},
+		{"nothing fits", 4, system.GPUInfo{}, UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 16384, "No catalog model fits"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := RecommendCodingModel(tc.ramGB, tc.gpu)
-			if got.Recommended != tc.wantModel {
-				t.Fatalf("recommended model = %q, want %q", got.Recommended, tc.wantModel)
+			got := Recommend(tc.ramGB, tc.gpu, tc.useCase)
+			if got.Recommended != tc.wantModel || got.Fallback != tc.wantFallback || got.OptionalLarger != tc.wantOptional || got.Context != tc.wantContext {
+				t.Fatalf("got %s / fallback %s / optional %q / ctx %d, want %s / %s / %q / %d",
+					got.Recommended, got.Fallback, got.OptionalLarger, got.Context,
+					tc.wantModel, tc.wantFallback, tc.wantOptional, tc.wantContext)
 			}
-			if got.Fallback != tc.wantFallback {
-				t.Fatalf("fallback model = %q, want %q", got.Fallback, tc.wantFallback)
-			}
-			if !strings.Contains(got.Reason, tc.reasonSubstring) {
-				t.Fatalf("reason = %q, want substring %q", got.Reason, tc.reasonSubstring)
+			if !strings.Contains(got.Reason, tc.wantReason) {
+				t.Fatalf("reason = %q, want substring %q", got.Reason, tc.wantReason)
 			}
 		})
+	}
+}
+
+func TestRecommendCodingModelIsAgentUseCase(t *testing.T) {
+	if got, want := RecommendCodingModel(32, gpu12GB), Recommend(32, gpu12GB, UseCaseAgent); got != want {
+		t.Fatalf("RecommendCodingModel = %+v, want the agent recommendation %+v", got, want)
+	}
+}
+
+func TestCatalogInvariants(t *testing.T) {
+	seen := map[string]bool{}
+	for _, m := range Catalog {
+		if seen[m.Tag] {
+			t.Fatalf("duplicate catalog tag %s", m.Tag)
+		}
+		seen[m.Tag] = true
+		if m.WeightsGB <= 0 || m.KVBytesPerToken <= 0 || m.ActiveParamsB <= 0 || m.ActiveParamsB > m.ParamsB || m.License == "" || m.Evidence == "" {
+			t.Fatalf("incomplete catalog entry %+v", m)
+		}
+	}
+
+	var defaultModel Model
+	for _, m := range Catalog {
+		if m.Tag == DefaultAgentModel {
+			defaultModel = m
+		}
+	}
+	if defaultModel.ToolCalls != ToolCallsVerified {
+		t.Fatalf("DefaultAgentModel %s must be a catalog entry with verified tool calls", DefaultAgentModel)
+	}
+
+	for _, useCase := range []UseCase{UseCaseAgent, UseCaseChat} {
+		for _, cpuOnly := range []bool{false, true} {
+			found := false
+			for _, m := range Catalog {
+				found = found || suitable(m, useCase, cpuOnly)
+			}
+			if !found {
+				t.Fatalf("no suitable catalog entry for use case %s (cpu only %v)", useCase, cpuOnly)
+			}
+		}
 	}
 }

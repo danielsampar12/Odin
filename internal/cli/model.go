@@ -71,10 +71,16 @@ func newModelListCmd() *cobra.Command {
 }
 
 func newModelRecommendCmd() *cobra.Command {
-	return &cobra.Command{
+	var useCase string
+
+	cmd := &cobra.Command{
 		Use:   "recommend",
 		Short: "Recommend a local coding model for this machine",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if useCase != string(models.UseCaseAgent) && useCase != string(models.UseCaseChat) {
+				return fmt.Errorf("unknown --use-case %q: use %q or %q", useCase, models.UseCaseAgent, models.UseCaseChat)
+			}
+
 			cwd, err := workingDir()
 			if err != nil {
 				return err
@@ -85,7 +91,7 @@ func newModelRecommendCmd() *cobra.Command {
 				return err
 			}
 
-			recommendation := models.RecommendCodingModel(result.RAMGB, result.GPU)
+			recommendation := models.Recommend(result.RAMGB, result.GPU, models.UseCase(useCase))
 			out := cmd.OutOrStdout()
 			fmt.Fprintln(out, "Odin model recommendation")
 			fmt.Fprintln(out)
@@ -95,16 +101,25 @@ func newModelRecommendCmd() *cobra.Command {
 				fmt.Fprintf(out, "Hardware: RAM unavailable, %s\n", result.GPU.Summary)
 			}
 			fmt.Fprintln(out)
+			fmt.Fprintf(out, "Use case: %s\n", useCase)
 			fmt.Fprintf(out, "Recommended coding model: %s\n", recommendation.Recommended)
+			fmt.Fprintf(out, "Context: %d tokens\n", recommendation.Context)
+			if useCase == string(models.UseCaseAgent) {
+				fmt.Fprintln(out, "  Set num_ctx to this: Ollama's default context is too small for OpenCode's prompt.")
+			}
 			fmt.Fprintf(out, "Fallback model: %s\n", recommendation.Fallback)
 			fmt.Fprintf(out, "Reason: %s\n", recommendation.Reason)
 			if recommendation.OptionalLarger != "" {
 				fmt.Fprintf(out, "Optional larger tier: %s\n", recommendation.OptionalLarger)
+				fmt.Fprintf(out, "  %s\n", recommendation.OptionalLargerReason)
 			}
 
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&useCase, "use-case", string(models.UseCaseAgent), "What the model is for: agent (OpenCode with tool calls) or chat (questions, no tools)")
+	return cmd
 }
 
 func newModelPullCmd() *cobra.Command {
