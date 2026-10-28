@@ -26,15 +26,15 @@ func TestRecommendScenarios(t *testing.T) {
 	}{
 		{"cpu only 8gb", 8, system.GPUInfo{}, UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "minutes per agent turn"},
 		{"cpu only 6gb keeps the minimum context", 6, system.GPUInfo{}, UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 16384, "fits with 16384 tokens"},
-		{"cpu only 16gb", 16, system.GPUInfo{}, UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "No dedicated GPU"},
+		{"cpu only 16gb", 16, system.GPUInfo{}, UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 65536, "No dedicated GPU"},
 		{"cpu only 32gb picks 3b-active moe", 32, system.GPUInfo{}, UseCaseAgent, "qwen3.5:35b-a3b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "no verified model is suitable"},
-		{"nvidia 8gb", 32, nvidia(8), UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "qwen3.5:9b-q4_K_M", 32768, "not verified"},
-		{"nvidia 12gb", 32, nvidia(12), UseCaseAgent, "qwen3.5:9b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "Measured by Odin"},
-		{"nvidia 16gb", 32, nvidia(16), UseCaseAgent, "qwen3.5:9b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "NVIDIA GPU with about 16GB"},
-		{"nvidia 24gb", 64, nvidia(24), UseCaseAgent, "qwen3.6:27b-q4_K_M", "qwen3.5:9b-q4_K_M", "", 32768, "measured fallback"},
-		{"apple 16gb", 16, apple, UseCaseAgent, "qwen3.5:9b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 32768, "Apple Silicon"},
+		{"nvidia 8gb", 32, nvidia(8), UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "qwen3.5:9b-q4_K_M", 65536, "not verified"},
+		{"nvidia 12gb", 32, nvidia(12), UseCaseAgent, "qwen3.5:9b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 65536, "Measured by Odin"},
+		{"nvidia 16gb", 32, nvidia(16), UseCaseAgent, "qwen3.5:9b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 65536, "NVIDIA GPU with about 16GB"},
+		{"nvidia 24gb", 64, nvidia(24), UseCaseAgent, "qwen3.6:27b-q4_K_M", "qwen3.5:9b-q4_K_M", "", 65536, "measured fallback"},
+		{"apple 16gb", 16, apple, UseCaseAgent, "qwen3.5:9b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 65536, "Apple Silicon"},
 		{"apple 32gb", 32, apple, UseCaseAgent, "qwen3.6:27b-q4_K_M", "qwen3.5:9b-q4_K_M", "", 32768, "unified memory"},
-		{"apple 48gb", 48, apple, UseCaseAgent, "qwen3.6:27b-q4_K_M", "qwen3.5:9b-q4_K_M", "", 32768, "measured fallback"},
+		{"apple 48gb", 48, apple, UseCaseAgent, "qwen3.6:27b-q4_K_M", "qwen3.5:9b-q4_K_M", "", 65536, "measured fallback"},
 		{"chat nvidia 16gb allows a tool-broken model", 32, nvidia(16), UseCaseChat, "gpt-oss:20b", "qwen3.5:9b-q4_K_M", "", 8192, "fits with 8192 tokens"},
 		{"chat cpu only 32gb", 32, system.GPUInfo{}, UseCaseChat, "qwen3.5:35b-a3b-q4_K_M", "gpt-oss:20b", "", 8192, "No dedicated GPU"},
 		{"nothing fits", 4, system.GPUInfo{}, UseCaseAgent, "qwen3.5:4b-q4_K_M", "qwen3.5:4b-q4_K_M", "", 16384, "No catalog model fits"},
@@ -104,7 +104,8 @@ func TestContextFor(t *testing.T) {
 		gpu   system.GPUInfo
 		want  int
 	}{
-		{"catalog model that fits at 32k", "qwen3.5:9b-q4_K_M", 32, gpu12GB, 32768},
+		{"catalog model that fits at 64k", "qwen3.5:9b-q4_K_M", 32, gpu12GB, 65536},
+		{"catalog model that fits at 32k", "qwen3.5:4b-q4_K_M", 8, system.GPUInfo{}, 32768},
 		{"catalog model that only fits the minimum", "qwen3.5:4b-q4_K_M", 6, system.GPUInfo{}, 16384},
 		{"model outside the catalog", "qwen3:14b", 32, gpu12GB, 16384},
 	}
