@@ -1,6 +1,7 @@
 package opencode
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"strings"
@@ -242,5 +243,56 @@ func TestEnsureV1Endpoint(t *testing.T) {
 		if got := ensureV1Endpoint(tc.input); got != tc.want {
 			t.Fatalf("ensureV1Endpoint(%q) = %q, want %q", tc.input, got, tc.want)
 		}
+	}
+}
+
+func TestGeneratedConfigHasCompanionAgents(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+	if err := os.MkdirAll(config.ProjectDir(projectDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(config.ProjectConfigPath(projectDir), []byte("[companion]\ndefault = \"tyr\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 32768}); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(config.ProjectGeneratedOpenCodeConfigPath(projectDir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var generated struct {
+		DefaultAgent string `json:"default_agent"`
+		Agent        map[string]struct {
+			Mode       string         `json:"mode"`
+			Prompt     string         `json:"prompt"`
+			Permission map[string]any `json:"permission"`
+		} `json:"agent"`
+	}
+	if err := json.Unmarshal(stripJSONC(body), &generated); err != nil {
+		t.Fatal(err)
+	}
+	if generated.DefaultAgent != "tyr" {
+		t.Fatalf("default_agent = %q, want the project's companion", generated.DefaultAgent)
+	}
+	baldur, tyr := generated.Agent["baldur"], generated.Agent["tyr"]
+	if baldur.Mode != "primary" || baldur.Prompt == "" || baldur.Permission["task"] != "deny" || baldur.Permission["edit"] != nil {
+		t.Fatalf("baldur agent = %+v", baldur)
+	}
+	if tyr.Permission["edit"] != "deny" || tyr.Permission["task"] != "deny" {
+		t.Fatalf("tyr must not edit files or start subagents: %+v", tyr.Permission)
+	}
+
+	if err := os.WriteFile(config.ProjectConfigPath(projectDir), []byte("[companion]\ndefault = \"freya\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	scaffold, err := ResolveProjectScaffold(projectDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scaffold.Companion != "baldur" || len(scaffold.Warnings) != 1 {
+		t.Fatalf("a v1 companion should fall back to baldur with a warning: %q, %q", scaffold.Companion, scaffold.Warnings)
 	}
 }

@@ -156,6 +156,7 @@ func printStartSummary(writer io.Writer, cwd string, scaffold opencodeplugin.Pro
 	fmt.Fprintln(writer)
 	fmt.Fprintf(writer, "Project: %s\n", projectName)
 	fmt.Fprintf(writer, "Companion: %s\n", companions.DisplayName(scaffold.Companion))
+	fmt.Fprintf(writer, "OpenCode agents: %s\n", agentSummary(scaffold.Companion))
 	fmt.Fprintf(writer, "Model: %s\n", scaffold.Model)
 	fmt.Fprintf(writer, "Runtime: %s\n", displayRuntimeName(scaffold.RuntimeProvider))
 	fmt.Fprintf(writer, "OpenCode config: %s\n", displayPath(scaffold.ConfigPath))

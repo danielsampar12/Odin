@@ -141,7 +141,7 @@ func executeStep(ctx context.Context, cwd string, plan Plan, step Step, runner R
 		return executeInstallCommandStep(ctx, step, runner, options, verifyMemPalaceInstall, false)
 	case StepPullModel:
 		return executeModelPullStep(ctx, plan, step, options.Stdout)
-	case StepRegisterCompanions, StepShellIntegration, StepProjectInit:
+	case StepShellIntegration, StepProjectInit:
 		return StepResult{Step: step, Outcome: OutcomeManual, Message: manualMessage(step)}, nil
 	default:
 		return StepResult{Step: step, Outcome: OutcomeManual, Message: manualMessage(step)}, nil

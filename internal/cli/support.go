@@ -105,32 +105,6 @@ func shellDisplay(path, name string) string {
 	return fmt.Sprintf("%s (%s)", name, path)
 }
 
-func detectProfile(cwd string, inGitRepo bool) string {
-	if inGitRepo || hasProjectMarkers(cwd) {
-		return "developer"
-	}
-	return "beginner"
-}
-
-func hasProjectMarkers(dir string) bool {
-	markers := []string{
-		"go.mod",
-		"package.json",
-		"pyproject.toml",
-		"Cargo.toml",
-		".git",
-		"Makefile",
-	}
-
-	for _, marker := range markers {
-		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
-			return true
-		}
-	}
-
-	return false
-}
-
 func printFileAction(writer io.Writer, path string, created bool) {
 	if created {
 		fmt.Fprintf(writer, "- Created %s\n", displayPath(path))

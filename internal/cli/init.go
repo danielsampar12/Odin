@@ -27,11 +27,11 @@ func newInitCmd() *cobra.Command {
 				return err
 			}
 
-			profile, err := detectProfileFromConfig(result)
+			global, err := config.Load(result.GlobalConfig.Path)
 			if err != nil {
 				return err
 			}
-			companion := companions.DefaultForProfile(profile)
+			companion, _ := companions.Lookup(global.Companion.Default)
 			projectName := filepath.Base(cwd)
 
 			projectDir := config.ProjectDir(cwd)
@@ -62,7 +62,7 @@ func newInitCmd() *cobra.Command {
 				return err
 			}
 
-			projectRulesCreated, err := config.WriteFileIfMissing(projectRulesPath, config.DefaultRules(projectName, companion.Name), 0o644)
+			projectRulesCreated, err := config.WriteFileIfMissing(projectRulesPath, config.DefaultRules(), 0o644)
 			if err != nil {
 				return err
 			}
@@ -112,15 +112,4 @@ func newInitCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&agentsMD, "agents-md", false, "Also create a repository-root AGENTS.md if there is none")
 	return cmd
-}
-
-func detectProfileFromConfig(result doctor.Result) (string, error) {
-	global, err := config.Load(result.GlobalConfig.Path)
-	if err != nil {
-		return "", err
-	}
-	if global.Profile != "" {
-		return global.Profile, nil
-	}
-	return detectProfile(result.CurrentDir, result.InGitRepo), nil
 }

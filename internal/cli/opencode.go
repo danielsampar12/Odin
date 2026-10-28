@@ -73,7 +73,8 @@ func newOpenCodeStatusCmd() *cobra.Command {
 			fmt.Fprintf(out, "Runtime base URL: %s\n", scaffold.RuntimeBaseURL)
 			fmt.Fprintf(out, "OpenCode provider/model: %s\n", scaffold.ProviderModel(numCtx))
 			fmt.Fprintf(out, "Context: %d tokens\n", numCtx)
-			fmt.Fprintf(out, "Selected companion: %s\n", companions.DisplayName(scaffold.Companion))
+			fmt.Fprintf(out, "Selected companion: %s (from %s)\n", companions.DisplayName(scaffold.Companion), scaffold.CompanionSource)
+			fmt.Fprintf(out, "OpenCode agents: %s\n", agentSummary(scaffold.Companion))
 			fmt.Fprintf(out, "Memory provider: %s\n", scaffold.MemoryProvider)
 			fmt.Fprintf(out, "Memory hall: %s\n", scaffold.MemoryHall)
 			fmt.Fprintf(out, "MemPalace MCP wiring: %s\n", memoryMCPLabel(memoryStatus.OpenCodeMCPConfigured, memoryStatus.OpenCodeMCPEnabled))
@@ -214,6 +215,26 @@ func printProvenance(out io.Writer, cwd string) {
 	fmt.Fprintf(out, "Instruction files: %s, plus any \"instructions\" listed above\n", strings.Join(found, ", "))
 	fmt.Fprintln(out, "Skipped at launch: CLAUDE.md files and skills in ~/.claude and ~/.agents (Odin sets OPENCODE_DISABLE_CLAUDE_CODE=1 and OPENCODE_DISABLE_EXTERNAL_SKILLS=1)")
 	fmt.Fprintln(out)
+}
+
+// agentSummary lists the generated OpenCode agents, e.g. "baldur (starts by default), tyr (read-only)".
+func agentSummary(defaultKey string) string {
+	var parts []string
+	for _, companion := range companions.Registry {
+		var notes []string
+		if companion.Key == defaultKey {
+			notes = append(notes, "starts by default")
+		}
+		if companion.ReadOnly {
+			notes = append(notes, "read-only")
+		}
+		if len(notes) > 0 {
+			parts = append(parts, fmt.Sprintf("%s (%s)", companion.Key, strings.Join(notes, ", ")))
+		} else {
+			parts = append(parts, companion.Key)
+		}
+	}
+	return strings.Join(parts, ", ") + "; press Tab in OpenCode to switch"
 }
 
 func printModelOverrides(out io.Writer, sources []opencodeplugin.Source) {

@@ -110,6 +110,7 @@ odin start --exec                    # validate everything, then launch OpenCode
 | `odin opencode generate [--force] [--with-memory]` | Writes the machine-local OpenCode config; refuses to replace a file Odin did not generate, or one edited by hand, unless `--force` |
 | `odin opencode status` | Shows whether the generated config is up to date, out of date or edited by hand, and where each OpenCode setting comes from |
 | `odin start [--exec]` | Validates the stack. With `--exec`, creates the context model if needed and launches OpenCode; exits non-zero if it cannot |
+| `odin companion list`, `odin companion show <name>` | Lists the companions and shows each one's OpenCode agent config and prompt |
 | `odin memory status`, `odin memory doctor` | Inspects the optional MemPalace integration |
 | `odin version` | Prints the version |
 
@@ -151,7 +152,14 @@ Memory is off by default. MemPalace support is optional: set `provider = "mempal
 
 ## Companions
 
-Companions such as Baldur (pair programmer) and Tyr (reviewer) are a planned way to choose how the agent works. In v2 the selected companion is only recorded in config and project instructions; it does not change OpenCode's behaviour yet. The v1 role prompts live in [`roles/`](roles/).
+Companions are OpenCode agents that `odin opencode generate` writes into the project's generated config, each with its own prompt (from [`roles/`](roles/)) and permissions:
+
+| Companion | What it does |
+|---|---|
+| **Baldur** (default) | Pair programmer: makes the changes you ask for, runs the tests, and explains tradeoffs |
+| **Tyr** | Reviewer: reads code and diffs, runs `go test`/`go vet` and reports problems. It cannot edit or write files, fetch URLs or start subagents, and its shell is limited to read-only commands |
+
+OpenCode starts on the companion set by `[companion] default` in `.odin/config.toml` (or `~/.odin/config.toml`); press Tab in OpenCode to switch, or use `opencode run --agent tyr`. `odin companion list` shows them and `odin companion show <name>` prints the exact agent config and prompt. A companion's prompt replaces OpenCode's built-in prompt for that agent; OpenCode's own `build` and `plan` agents stay available. After upgrading Odin, run `odin opencode generate` again: a changed prompt makes the generated config out of date.
 
 ## Uninstall
 

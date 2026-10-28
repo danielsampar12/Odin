@@ -26,6 +26,12 @@ contains "No changes were made"
 [ ! -e "$HOME/.odin" ] || fail "setup --dry-run wrote $HOME/.odin"
 run model recommend
 contains "Recommended coding model:"
+run companion list
+contains "* baldur"
+contains "tyr"
+run companion show tyr
+contains '"edit": "deny"'
+expect_failure companion show freya
 
 project="$work/project"
 mkdir -p "$project" && cd "$project" && git init -q
@@ -48,6 +54,7 @@ run opencode generate
 contains "Created"
 grep -q '".odin/rules.md"' .odin/generated/opencode.jsonc || fail "generated config does not load .odin/rules.md"
 grep -qE '"model": "ollama/.+-ctx(16|32)k"' .odin/generated/opencode.jsonc || fail "generated config does not use a context model"
+grep -q '"default_agent": "baldur"' .odin/generated/opencode.jsonc || fail "generated config does not start on the default companion"
 run opencode generate
 contains "Kept existing"
 run opencode status

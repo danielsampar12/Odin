@@ -2,7 +2,7 @@
 
 Updated 2026-10-28.
 
-**Next milestone: Odin works for someone who isn't its creator.** Three people on fresh machines (at least one macOS and one Linux) reach a successful, tool-using OpenCode edit through `odin start --exec`, using only the README, within 45 minutes and without help.
+**Next milestone (still open): Odin works for someone who isn't its creator.** Three people on fresh machines (at least one macOS and one Linux) reach a successful, tool-using OpenCode edit through `odin start --exec`, using only the README, within 45 minutes and without help.
 
 ## Done
 
@@ -36,9 +36,15 @@ Next: run the milestone with three testers before starting Stage 3.
 - [x] Launches also set `OPENCODE_DISABLE_EXTERNAL_SKILLS=1`: OpenCode otherwise lists every skill under `~/.claude/skills` and `~/.agents/skills` (~14k characters on the test machine) in each session's prompt.
 - [x] `odin model pull` and `odin model list` exit non-zero when Ollama is unreachable or a pull fails; pulling an installed model is a no-op.
 
-## Stage 3: companions as OpenCode agents (after the milestone)
+## Stage 3: companions as OpenCode agents (done, ahead of the milestone)
 
-- [ ] Map two or three companions to OpenCode agents with their own prompt, tools and permissions, using the existing `roles/` prompts.
+The plan put Stage 3 after the three-tester milestone; the maintainer chose to build it first. The milestone stays open.
+
+- [x] Baldur (default) and Tyr (reviewer) are OpenCode primary agents in the generated config, with prompts from `roles/*.md` embedded in the binary; `[companion] default` sets OpenCode's `default_agent`.
+- [x] Tyr cannot edit or write files, fetch URLs or start subagents, and its shell is limited to read-only commands. No companion may start subagents (no orchestration).
+- [x] `odin companion list` and `odin companion show <name>`.
+- [x] Hephaestus, Freya, Thor and Loki are dropped from Odin v2 until they have agent definitions; a config that names one falls back to Baldur with a warning.
+- [x] `roles/baldur.md` is rewritten for agent work, because an agent prompt replaces OpenCode's built-in prompt. Odin v1 (`legacy/`) reads the same file.
 
 ## Open risks
 

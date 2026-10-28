@@ -31,17 +31,13 @@ default = %q
 `, settings.Name, settings.AgentProvider, settings.RuntimeProvider, settings.MemoryProvider, settings.MemoryHall, settings.CompanionDefault)
 }
 
-func DefaultRules(projectName, companionName string) string {
-	return fmt.Sprintf(`# Odin Project Rules
+// DefaultRules is .odin/rules.md. OpenCode puts it in every session's prompt, so it starts nearly empty.
+func DefaultRules() string {
+	return `# Project rules
 
-This project was initialized by Odin v2 for %s.
-
-- Keep generated configs inspectable.
-- Prefer local-first and privacy-first defaults.
-- Treat OpenCode as the coding agent and Ollama as the runtime.
-- Use %s as the default Odin companion unless the project decides otherwise.
-- Keep .odin/generated/ as Odin-managed generated output.
-`, projectName, companionName)
+<!-- OpenCode loads this file into every session in this repository. Add the rules the agent should
+follow here: how to build and test, code style, what to avoid. -->
+`
 }
 
 func DefaultAgents(projectName, companionName string) string {

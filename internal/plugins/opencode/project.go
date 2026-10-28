@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/danielsampar12/odin/internal/companions"
 	"github.com/danielsampar12/odin/internal/config"
 	"github.com/danielsampar12/odin/internal/models"
 	mempalaceplugin "github.com/danielsampar12/odin/internal/plugins/mempalace"
@@ -33,6 +34,7 @@ type ProjectScaffold struct {
 	MemoryHall          string
 	Model               string
 	Companion           string
+	CompanionSource     string   // the config file that chose the companion
 	Warnings            []string // config problems the user should fix; commands print them
 }
 
@@ -69,6 +71,18 @@ func ResolveProjectScaffold(cwd string) (ProjectScaffold, error) {
 		warnings = append(warnings, fmt.Sprintf("%s sets [runtime] base_url, which Odin ignores: the Ollama URL is machine-specific and comes from ~/.odin/config.toml. Delete that line from the project file.", displayName(cwd, projectConfigPath)))
 	}
 
+	companionKey, companionSource := companions.Default().Key, "Odin's default"
+	if global.Companion.Default != "" {
+		companionKey, companionSource = global.Companion.Default, "~/.odin/config.toml"
+	}
+	if project.Companion.Default != "" {
+		companionKey, companionSource = project.Companion.Default, displayName(cwd, projectConfigPath)
+	}
+	companion, known := companions.Lookup(companionKey)
+	if !known {
+		warnings = append(warnings, fmt.Sprintf("companion %q is not available in Odin v2; using %s. Run `odin companion list` to choose one.", companionKey, companion.Name))
+	}
+
 	baseURL := firstSet(global.Runtime.BaseURL, ollamaplugin.DefaultBaseURL)
 	return ProjectScaffold{
 		ProjectDir:          cwd,
@@ -79,7 +93,8 @@ func ResolveProjectScaffold(cwd string) (ProjectScaffold, error) {
 		MemoryProvider:      firstSet(project.Memory.Provider, global.Memory.Provider, "none"), // memory is opt-in
 		MemoryHall:          firstSet(project.Memory.Hall, mempalaceplugin.DeriveHall(cwd)),
 		Model:               firstSet(global.Model.Default, models.DefaultAgentModel),
-		Companion:           firstSet(project.Companion.Default, global.Companion.Default, "baldur"),
+		Companion:           companion.Key,
+		CompanionSource:     companionSource,
 		Warnings:            warnings,
 	}, nil
 }
@@ -138,7 +153,9 @@ func (s ProjectScaffold) RenderJSONC(options GenerateOptions) (string, error) {
 		},
 		"model": s.ProviderModel(options.Context),
 		// OpenCode resolves instruction paths from the project root, not from this file.
-		"instructions": []string{".odin/rules.md"},
+		"instructions":  []string{".odin/rules.md"},
+		"default_agent": s.Companion,
+		"agent":         agents(),
 	}
 
 	memoryComment := `// MemPalace MCP: not included by default. Re-run "odin opencode generate --with-memory" after verifying MemPalace is installed.`
@@ -234,6 +251,39 @@ func GeneratedConfigState(cwd string, options GenerateOptions) (ConfigState, err
 	}
 	return classify(string(existing), want), nil
 }
+
+// agents maps each companion to an OpenCode primary agent. task is denied for all of them: subagents
+// would be multi-agent orchestration, and a reviewer's subagent would have full edit rights.
+func agents() map[string]any {
+	entries := map[string]any{}
+	for _, companion := range companions.Registry {
+		entries[companion.Key] = AgentConfig(companion)
+	}
+	return entries
+}
+
+// AgentConfig is the OpenCode agent entry Odin generates for a companion.
+func AgentConfig(companion companions.Companion) map[string]any {
+	permission := map[string]any{"task": "deny"}
+	if companion.ReadOnly {
+		// These rules come after the project's own permissions, and OpenCode applies the last match.
+		bash := map[string]string{"*": "deny"}
+		for _, command := range ReadOnlyCommands {
+			bash[command+"*"] = "allow"
+		}
+		permission = map[string]any{"edit": "deny", "task": "deny", "webfetch": "deny", "bash": bash}
+	}
+	return map[string]any{
+		"description": companion.Description,
+		"mode":        "primary",
+		"prompt":      companion.Prompt(),
+		"permission":  permission,
+	}
+}
+
+// ReadOnlyCommands are the shell commands a read-only companion may run (with any arguments). Reading
+// files goes through OpenCode's read/grep/glob tools; cat is left out because `cat > file` writes.
+var ReadOnlyCommands = []string{"git diff", "git log", "git show", "git status", "go test", "go vet", "ls"}
 
 func WriteGeneratedConfig(cwd string, options GenerateOptions) (WriteResult, error) {
 	scaffold, err := ResolveProjectScaffold(cwd)

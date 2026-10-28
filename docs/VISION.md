@@ -94,15 +94,11 @@ Read-only diagnostics for the current machine and project.
 
 Companions remain a core part of Odin's identity.
 
-Current and planned companion concepts:
-- Baldur: pragmatic pair programmer
-- Tyr: architect and reviewer
-- Thor: fast implementer
-- Loki: chaos agent (unconventional approaches)
-- Freya: beginner-friendly teacher
-- Hephaestus: infra and local setup expert
+Shipped in v2 as OpenCode agents (Stage 3):
+- Baldur: pragmatic pair programmer (default)
+- Tyr: architect and reviewer, read-only
 
-In v2, Odin should eventually translate companion choices into generated OpenCode or project guidance files without deleting or discarding the existing role files.
+Concepts without an agent definition yet: Thor (fast implementer), Loki (unconventional approaches), Freya (beginner-friendly teacher), Hephaestus (infra and local setup). Each needs a role file and measured behaviour before it ships. The role files in `roles/` stay, and Odin v1 still reads them.
 
 ## Memory direction
 
