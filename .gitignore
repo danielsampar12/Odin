@@ -9,3 +9,6 @@ coverage.out
 
 # Local Odin state
 .odin/
+
+# graphify knowledge graph output
+graphify-out/
