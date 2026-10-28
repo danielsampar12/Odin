@@ -32,6 +32,7 @@ type Sampling struct {
 	TopP            float64
 	TopK            int
 	PresencePenalty float64
+	NoThinking      bool // turn the model's thinking off through OpenCode (reasoningEffort "none")
 }
 
 // qwenCoding is Qwen's "thinking mode, precise coding" setting from the Qwen3.5 model cards [V]. Ollama's
@@ -84,7 +85,7 @@ var Catalog = []Model{
 	},
 	{
 		Tag: "qwen3.5:9b-q4_K_M", ParamsB: 9, ActiveParamsB: 9, WeightsGB: 6.55, KVBytesPerToken: 32768,
-		License: "Apache-2.0", ToolCalls: ToolCallsVerified, Sampling: qwenCoding,
+		License: "Apache-2.0", ToolCalls: ToolCallsVerified, Sampling: &Sampling{Temperature: 0.6, TopP: 0.95, TopK: 20, NoThinking: true},
 		Evidence: "Measured by Odin [M]: completed the Stage 0 OpenCode task in 2 of 3 runs, 100% GPU at 32k on 12 GB (7.6 GiB); Terminal-Bench 2.1 29.2 [T, Artificial Analysis].",
 	},
 	{

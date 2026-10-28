@@ -261,6 +261,9 @@ func modelEntry(name string, numCtx int, sampling *models.Sampling) map[string]a
 	if sampling != nil {
 		entry["temperature"] = true // without it OpenCode never sends an agent's temperature to this model
 	}
+	if sampling != nil && sampling.NoThinking {
+		entry["options"] = map[string]any{"reasoningEffort": "none"} // Ollama maps reasoning_effort "none" to think=false
+	}
 	return entry
 }
 
