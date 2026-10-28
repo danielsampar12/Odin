@@ -15,13 +15,14 @@ Updated 2026-10-28.
 - Memory is off by default; MemPalace is opt-in.
 - `odin doctor` warns about the Odin v1 `odin()` shell function.
 - Accurate README with install, upgrade, uninstall and a list of files Odin creates; v1 docs moved to `legacy/README.md`.
+- `odin opencode generate` exits non-zero when it refuses to overwrite a file.
+- First-run smoke test (`scripts/smoke-test.sh`): the full CLI flow in an empty HOME without Ollama or OpenCode.
 
 ## Stage 1: reliable foundation (in progress)
 
 - [ ] Merge `v2` into `main`, port `main`'s companion-temperature change into `legacy/setup.sh`, and freeze legacy.
 - [ ] Tag `v0.2.0`; GitHub Actions for `go vet` and `go test`; release binaries with GoReleaser.
-- [ ] Clean-install test in a container.
-- [ ] `odin opencode generate` exits non-zero when it refuses to overwrite a file.
+- [ ] Run `scripts/smoke-test.sh` in CI on a clean runner (the clean-install test).
 
 ## Stage 2: repeatable project workflow
 
