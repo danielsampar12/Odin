@@ -48,7 +48,8 @@ mkdir -p "$BENCH_DIR"
 echo "odin: $(odin version) ($(command -v odin)); opencode $(opencode --version); agent: ${AGENT:-default}" | tee "$BENCH_DIR/versions.txt"
 [ -f "$OUT" ] || printf 'task\trun\tpass\tseconds\texit\ttools\ttool_errors\ttests_edited\tclaimed_pass\tfalse_claim\tprocessor\tcontext\n' > "$OUT"
 
-# Grants the tools a coding task needs without OpenCode's interactive approval prompts.
+# Grants the tools a coding task needs without OpenCode's interactive approval prompts. OpenCode checks
+# each part of `cd repo && go test ./...` separately, so cd is allowed too.
 ALLOWLIST='{
   "$schema": "https://opencode.ai/config.json",
   "permission": {
@@ -60,6 +61,7 @@ ALLOWLIST='{
       "go test*": "allow",
       "go vet*": "allow",
       "gofmt*": "allow",
+      "cd*": "allow",
       "ls*": "allow",
       "cat*": "allow",
       "grep*": "allow"
