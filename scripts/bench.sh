@@ -48,8 +48,9 @@ mkdir -p "$BENCH_DIR"
 echo "odin: $(odin version) ($(command -v odin)); opencode $(opencode --version); agent: ${AGENT:-default}" | tee "$BENCH_DIR/versions.txt"
 [ -f "$OUT" ] || printf 'task\trun\tpass\tseconds\texit\ttools\ttool_errors\ttests_edited\tclaimed_pass\tfalse_claim\tprocessor\tcontext\n' > "$OUT"
 
-# Grants the tools a coding task needs without OpenCode's interactive approval prompts. OpenCode checks
-# each part of `cd repo && go test ./...` separately, so cd is allowed too.
+# Grants what a user would approve for a coding task (the Go toolchain and read-only commands) without
+# OpenCode's interactive prompts; nothing that deletes or moves files. OpenCode checks each part of
+# `cd repo && go test ./... | head` separately, so cd and head are allowed too.
 ALLOWLIST='{
   "$schema": "https://opencode.ai/config.json",
   "permission": {
@@ -60,11 +61,21 @@ ALLOWLIST='{
       "*": "deny",
       "go test*": "allow",
       "go vet*": "allow",
+      "go build*": "allow",
+      "go run*": "allow",
+      "go doc*": "allow",
+      "go env*": "allow",
       "gofmt*": "allow",
       "cd*": "allow",
+      "pwd*": "allow",
       "ls*": "allow",
       "cat*": "allow",
-      "grep*": "allow"
+      "grep*": "allow",
+      "head*": "allow",
+      "tail*": "allow",
+      "wc*": "allow",
+      "sort*": "allow",
+      "diff*": "allow"
     }
   }
 }'
