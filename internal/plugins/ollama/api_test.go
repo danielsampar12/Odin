@@ -138,7 +138,7 @@ func TestCreateContextModel(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if err := CreateContextModel(context.Background(), server.URL, "qwen3.5:9b-q4_K_M", 16384); err != nil {
+	if err := CreateContextModel(context.Background(), server.URL, "qwen3.5:9b-q4_K_M", 16384, map[string]any{"top_k": 20}); err != nil {
 		t.Fatalf("CreateContextModel error = %v", err)
 	}
 }

@@ -20,7 +20,40 @@ type Model struct {
 	KVBytesPerToken int     // f16 KV cache per context token: 2 x full-attention layers x kv_heads x head_dim x 2 bytes
 	License         string  // all current entries are open-weight; docs/MODEL_CATALOG.md tracks open-source status
 	ToolCalls       ToolCalls
-	Evidence        string // why it is ranked here: [M] measured by Odin, [V] vendor-reported, [T] third-party
+	Evidence        string    // why it is ranked here: [M] measured by Odin, [V] vendor-reported, [T] third-party
+	Sampling        *Sampling // vendor-recommended sampling for coding; nil keeps Ollama's settings
+}
+
+// Sampling is a vendor's recommended sampling for agentic coding. Ollama's OpenAI-compatible endpoint
+// resets temperature and top_p to 1.0 unless the request sets them, so Odin has OpenCode send those two
+// and bakes top_k and presence_penalty into the derived context model.
+type Sampling struct {
+	Temperature     float64
+	TopP            float64
+	TopK            int
+	PresencePenalty float64
+}
+
+// qwenCoding is Qwen's "thinking mode, precise coding" setting from the Qwen3.5 model cards [V]. Ollama's
+// qwen3.5 models ship the general thinking setting instead (temperature 1.0, presence_penalty 1.5).
+var qwenCoding = &Sampling{Temperature: 0.6, TopP: 0.95, TopK: 20, PresencePenalty: 0}
+
+// OllamaParameters are the Modelfile parameters for a derived model; a nil Sampling has none.
+func (s *Sampling) OllamaParameters() map[string]any {
+	if s == nil {
+		return nil
+	}
+	return map[string]any{"temperature": s.Temperature, "top_p": s.TopP, "top_k": s.TopK, "presence_penalty": s.PresencePenalty}
+}
+
+// SamplingFor returns the catalog's recommended sampling for tag, or nil.
+func SamplingFor(tag string) *Sampling {
+	for _, m := range Catalog {
+		if m.Tag == tag {
+			return m.Sampling
+		}
+	}
+	return nil
 }
 
 // DefaultAgentModel is used when no model has been configured. It must stay a verified, small entry.
@@ -51,7 +84,7 @@ var Catalog = []Model{
 	},
 	{
 		Tag: "qwen3.5:9b-q4_K_M", ParamsB: 9, ActiveParamsB: 9, WeightsGB: 6.55, KVBytesPerToken: 32768,
-		License: "Apache-2.0", ToolCalls: ToolCallsVerified,
+		License: "Apache-2.0", ToolCalls: ToolCallsVerified, Sampling: qwenCoding,
 		Evidence: "Measured by Odin [M]: completed the Stage 0 OpenCode task in 2 of 3 runs, 100% GPU at 32k on 12 GB (7.6 GiB); Terminal-Bench 2.1 29.2 [T, Artificial Analysis].",
 	},
 	{

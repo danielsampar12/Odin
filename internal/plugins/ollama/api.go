@@ -148,13 +148,18 @@ func ContextModelName(base string, numCtx int) string {
 	return fmt.Sprintf("%s-ctx%dk", base, numCtx/1024)
 }
 
-// CreateContextModel creates ContextModelName(base, numCtx) with num_ctx baked in. Ollama's
-// OpenAI-compatible endpoint, which OpenCode uses, cannot set num_ctx per request.
-func CreateContextModel(ctx context.Context, baseURL, base string, numCtx int) error {
+// CreateContextModel creates or updates ContextModelName(base, numCtx) with num_ctx and any extra
+// parameters baked in. Ollama's OpenAI-compatible endpoint, which OpenCode uses, cannot set num_ctx per
+// request. Creating from an installed model copies no weights, so repeating it is cheap and idempotent.
+func CreateContextModel(ctx context.Context, baseURL, base string, numCtx int, extra map[string]any) error {
+	parameters := map[string]any{"num_ctx": numCtx}
+	for key, value := range extra {
+		parameters[key] = value
+	}
 	body, err := json.Marshal(map[string]any{
 		"model":      ContextModelName(base, numCtx),
 		"from":       base,
-		"parameters": map[string]int{"num_ctx": numCtx},
+		"parameters": parameters,
 		"stream":     false,
 	})
 	if err != nil {

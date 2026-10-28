@@ -122,14 +122,18 @@ func newStartCmd() *cobra.Command {
 			case state != opencodeplugin.ConfigUpToDate:
 				return fmt.Errorf("cannot launch OpenCode: %s", configStateHint(state))
 			}
+			if !ollamaModelInstalled(result.Ollama.Models, scaffold.Model) {
+				return fmt.Errorf("model %q is not installed; pull it with `odin model pull %s`", scaffold.Model, scaffold.Model)
+			}
+			// Recreated on every launch so its parameters follow the catalog; no weights are copied.
+			verb := "Updating"
 			if !ollamaModelInstalled(result.Ollama.Models, contextModel) {
-				if !ollamaModelInstalled(result.Ollama.Models, scaffold.Model) {
-					return fmt.Errorf("model %q is not installed; pull it with `odin model pull %s`", scaffold.Model, scaffold.Model)
-				}
-				fmt.Fprintf(out, "Creating Ollama model %s (%s with num_ctx %d).\n", contextModel, scaffold.Model, numCtx)
-				if err := ollamaplugin.CreateContextModel(cmd.Context(), result.Ollama.BaseURL, scaffold.Model, numCtx); err != nil {
-					return fmt.Errorf("create Ollama model %s: %w", contextModel, err)
-				}
+				verb = "Creating"
+			}
+			sampling := models.SamplingFor(scaffold.Model)
+			fmt.Fprintf(out, "%s Ollama model %s (%s with num_ctx %d%s).\n", verb, contextModel, scaffold.Model, numCtx, samplingLabel(sampling))
+			if err := ollamaplugin.CreateContextModel(cmd.Context(), result.Ollama.BaseURL, scaffold.Model, numCtx, sampling.OllamaParameters()); err != nil {
+				return fmt.Errorf("create Ollama model %s: %w", contextModel, err)
 			}
 
 			fmt.Fprintln(out)
@@ -163,6 +167,13 @@ func printStartSummary(writer io.Writer, cwd string, scaffold opencodeplugin.Pro
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Launching:")
 	fmt.Fprintf(writer, "%s\n", opencodeplugin.LaunchCommand(binaryPath))
+}
+
+func samplingLabel(sampling *models.Sampling) string {
+	if sampling == nil {
+		return ""
+	}
+	return fmt.Sprintf(", temperature %g, top_p %g, top_k %d, presence_penalty %g", sampling.Temperature, sampling.TopP, sampling.TopK, sampling.PresencePenalty)
 }
 
 func ollamaModelInstalled(models []ollamaplugin.Model, name string) bool {

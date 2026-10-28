@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/danielsampar12/odin/internal/companions"
+	"github.com/danielsampar12/odin/internal/models"
 	opencodeplugin "github.com/danielsampar12/odin/internal/plugins/opencode"
 	"github.com/spf13/cobra"
 )
@@ -70,7 +71,15 @@ func newCompanionShowCmd() *cobra.Command {
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "%s (%s)\n", companion.Name, companion.Key)
 			fmt.Fprintln(out, companion.Description)
-			agent := opencodeplugin.AgentConfig(companion)
+			cwd, err := workingDir()
+			if err != nil {
+				return err
+			}
+			scaffold, err := opencodeplugin.ResolveProjectScaffold(cwd)
+			if err != nil {
+				return err
+			}
+			agent := opencodeplugin.AgentConfig(companion, models.SamplingFor(scaffold.Model))
 			prompt := agent["prompt"]
 			delete(agent, "prompt")
 			body, err := json.MarshalIndent(agent, "", "  ")

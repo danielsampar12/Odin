@@ -133,6 +133,7 @@ func (s ProjectScaffold) SupportsMemory() bool {
 }
 
 func (s ProjectScaffold) RenderJSONC(options GenerateOptions) (string, error) {
+	sampling := models.SamplingFor(s.Model)
 	payload := map[string]any{
 		"$schema": "https://opencode.ai/config.json",
 		"provider": map[string]any{
@@ -143,11 +144,7 @@ func (s ProjectScaffold) RenderJSONC(options GenerateOptions) (string, error) {
 					"baseURL": s.OpenAICompatibleURL,
 				},
 				"models": map[string]any{
-					s.ContextModel(options.Context): map[string]any{
-						"name": s.ContextModel(options.Context),
-						// Lets OpenCode compact the session before it outgrows num_ctx.
-						"limit": map[string]int{"context": options.Context, "output": options.Context / 4},
-					},
+					s.ContextModel(options.Context): modelEntry(s.ContextModel(options.Context), options.Context, sampling),
 				},
 			},
 		},
@@ -155,7 +152,7 @@ func (s ProjectScaffold) RenderJSONC(options GenerateOptions) (string, error) {
 		// OpenCode resolves instruction paths from the project root, not from this file.
 		"instructions":  []string{".odin/rules.md"},
 		"default_agent": s.Companion,
-		"agent":         agents(),
+		"agent":         agents(sampling),
 	}
 
 	memoryComment := `// MemPalace MCP: not included by default. Re-run "odin opencode generate --with-memory" after verifying MemPalace is installed.`
@@ -252,18 +249,30 @@ func GeneratedConfigState(cwd string, options GenerateOptions) (ConfigState, err
 	return classify(string(existing), want), nil
 }
 
+func modelEntry(name string, numCtx int, sampling *models.Sampling) map[string]any {
+	entry := map[string]any{
+		"name": name,
+		// Lets OpenCode compact the session before it outgrows num_ctx.
+		"limit": map[string]int{"context": numCtx, "output": numCtx / 4},
+	}
+	if sampling != nil {
+		entry["temperature"] = true // without it OpenCode never sends an agent's temperature to this model
+	}
+	return entry
+}
+
 // agents maps each companion to an OpenCode primary agent. task is denied for all of them: subagents
 // would be multi-agent orchestration, and a reviewer's subagent would have full edit rights.
-func agents() map[string]any {
+func agents(sampling *models.Sampling) map[string]any {
 	entries := map[string]any{}
 	for _, companion := range companions.Registry {
-		entries[companion.Key] = AgentConfig(companion)
+		entries[companion.Key] = AgentConfig(companion, sampling)
 	}
 	return entries
 }
 
 // AgentConfig is the OpenCode agent entry Odin generates for a companion.
-func AgentConfig(companion companions.Companion) map[string]any {
+func AgentConfig(companion companions.Companion, sampling *models.Sampling) map[string]any {
 	permission := map[string]any{"task": "deny"}
 	if companion.ReadOnly {
 		// These rules come after the project's own permissions, and OpenCode applies the last match.
@@ -273,12 +282,16 @@ func AgentConfig(companion companions.Companion) map[string]any {
 		}
 		permission = map[string]any{"edit": "deny", "task": "deny", "webfetch": "deny", "bash": bash}
 	}
-	return map[string]any{
+	entry := map[string]any{
 		"description": companion.Description,
 		"mode":        "primary",
 		"prompt":      companion.Prompt(),
 		"permission":  permission,
 	}
+	if sampling != nil {
+		entry["temperature"], entry["top_p"] = sampling.Temperature, sampling.TopP
+	}
+	return entry
 }
 
 // ReadOnlyCommands are the shell commands a read-only companion may run (with any arguments). Reading
