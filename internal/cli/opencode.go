@@ -112,8 +112,7 @@ func newOpenCodeGenerateCmd() *cobra.Command {
 			})
 			if err != nil {
 				if err == opencodeplugin.ErrUnmanagedGeneratedConfig {
-					fmt.Fprintf(cmd.OutOrStdout(), "Refusing to overwrite %s because it is not Odin-managed. Re-run with `--force` if you want Odin to replace it.\n", displayPath(result.Path))
-					return nil
+					return fmt.Errorf("refusing to overwrite %s because it is not Odin-managed; re-run with --force to replace it", displayPath(result.Path))
 				}
 				return err
 			}
