@@ -50,7 +50,7 @@ func ResolveProjectStatus(cwd string) (ProjectStatus, error) {
 		hallDerived = true
 	}
 
-	resolvedProvider := ExpectedProvider
+	resolvedProvider := "none" // memory is opt-in
 	if globalProvider != "" {
 		resolvedProvider = globalProvider
 	}

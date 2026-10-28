@@ -166,7 +166,7 @@ func executeGlobalConfigStep(plan Plan, step Step) (StepResult, error) {
 		RuntimeProvider:  "ollama",
 		RuntimeBaseURL:   plan.Recommendation.RuntimeBaseURL,
 		AgentProvider:    "opencode",
-		MemoryProvider:   "mempalace",
+		MemoryProvider:   "none",
 		ShellProvider:    plan.Recommendation.ShellProvider,
 		ShellEnabled:     plan.Recommendation.ShellEnabled,
 		ModelDefault:     plan.Recommendation.Model,

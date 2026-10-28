@@ -136,7 +136,7 @@ func buildRecommendation(result doctor.Result) Recommendation {
 		Model:          modelRecommendation.Recommended,
 		FallbackModel:  modelRecommendation.Fallback,
 		Agent:          "OpenCode",
-		Memory:         "MemPalace",
+		Memory:         "none (MemPalace is optional)",
 		CompanionKey:   companion.Key,
 		CompanionName:  companion.Name,
 		ShellProvider:  shellProvider,
@@ -407,24 +407,14 @@ func memPalaceInstallStep(result doctor.Result, method InstallMethod) Step {
 		}
 	}
 
-	status := StatusManual
-	if result.OS.Name != "linux" {
-		status = StatusUnsupported
-	}
-	if method.Automatic {
-		status = StatusNeeded
-	}
-
 	return Step{
-		ID:                   StepInstallMemPalace,
-		Name:                 "Install MemPalace",
-		Status:               status,
-		Reason:               "MemPalace is missing.",
-		Method:               method.Name,
-		Command:              method.Command,
-		Notes:                method.Notes,
-		Automatic:            method.Automatic,
-		RequiresConfirmation: true,
+		ID:      StepInstallMemPalace,
+		Name:    "Install MemPalace",
+		Status:  StatusSkipped,
+		Reason:  "MemPalace is optional and memory is off by default; install it only if you opt in.",
+		Method:  method.Name,
+		Command: method.Command,
+		Notes:   method.Notes,
 	}
 }
 

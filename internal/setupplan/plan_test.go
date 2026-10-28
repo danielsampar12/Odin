@@ -119,3 +119,10 @@ func TestBuildDoesNotCreateGlobalConfig(t *testing.T) {
 		t.Fatalf("expected Build to stay read-only, stat err = %v", err)
 	}
 }
+
+func TestMemPalaceInstallStepSkippedWhenMissing(t *testing.T) {
+	step := memPalaceInstallStep(doctor.Result{OS: system.OSInfo{Name: "linux"}}, InstallMethod{Name: "PyPI install with pip", Command: "pip install mempalace", Automatic: true})
+	if step.Status != StatusSkipped || step.Automatic {
+		t.Fatalf("step = %+v, want a skipped, non-automatic step: memory is opt-in", step)
+	}
+}

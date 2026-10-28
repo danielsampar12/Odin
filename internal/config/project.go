@@ -40,7 +40,7 @@ This project was initialized by Odin v2 for %s.
 
 - Keep generated configs inspectable.
 - Prefer local-first and privacy-first defaults.
-- Treat OpenCode as the coding agent, Ollama as the runtime, and MemPalace as the primary memory provider.
+- Treat OpenCode as the coding agent and Ollama as the runtime.
 - Use %s as the default Odin companion unless the project decides otherwise.
 - Keep .odin/generated/ as Odin-managed generated output.
 `, projectName, companionName)
@@ -65,7 +65,6 @@ Intended stack:
 - Odin manages the local-first AI workstation experience for this project.
 - OpenCode is the coding agent.
 - Ollama is the local model runtime.
-- MemPalace is the primary memory provider.
 
 This file is intentionally small and inspectable.
 `, projectName, companionName)

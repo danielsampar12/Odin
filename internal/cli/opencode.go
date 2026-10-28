@@ -77,7 +77,7 @@ func newOpenCodeStatusCmd() *cobra.Command {
 				fmt.Fprintln(out, "Generated config is missing. Run `odin opencode generate`.")
 			} else if !opencodeplugin.GeneratedConfigUses(cwd, scaffold.ProviderModel(numCtx)) {
 				fmt.Fprintln(out, "Generated config does not match the current model or context. Re-run `odin opencode generate`.")
-			} else if !memoryStatus.OpenCodeMCPConfigured {
+			} else if scaffold.SupportsMemory() && !memoryStatus.OpenCodeMCPConfigured {
 				fmt.Fprintln(out, "MemPalace MCP is not wired into the generated config. Re-run `odin opencode generate --with-memory` to opt in.")
 			}
 

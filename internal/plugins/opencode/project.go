@@ -55,7 +55,7 @@ func ResolveProjectScaffold(cwd string) (ProjectScaffold, error) {
 		runtimeProvider = value
 	}
 
-	memoryProvider := mempalaceplugin.ExpectedProvider
+	memoryProvider := "none" // memory is opt-in; MemPalace only when configured
 	if value, err := config.ReadGlobalMemoryProvider(globalConfigPath); err == nil && value != "" {
 		memoryProvider = value
 	}

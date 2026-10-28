@@ -51,7 +51,7 @@ func newInitCmd() *cobra.Command {
 				Name:             projectName,
 				AgentProvider:    "opencode",
 				RuntimeProvider:  "ollama",
-				MemoryProvider:   "mempalace",
+				MemoryProvider:   "none",
 				MemoryHall:       projectName,
 				ModelDefault:     modelRecommendation.Recommended,
 				CompanionDefault: companion.Key,
@@ -94,8 +94,7 @@ func newInitCmd() *cobra.Command {
 			printFileAction(out, agentsPath, agentsCreated)
 			fmt.Fprintln(out)
 			fmt.Fprintf(out, "Default companion: %s\n", companion.Name)
-			fmt.Fprintf(out, "Memory hall: %s\n", projectName)
-			fmt.Fprintln(out, "MemPalace project integration is intentionally scaffolded for now.")
+			fmt.Fprintln(out, "Memory: off by default. To opt in to MemPalace, set [memory] provider = \"mempalace\" in .odin/config.toml.")
 
 			return nil
 		},

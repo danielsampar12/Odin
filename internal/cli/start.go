@@ -51,7 +51,9 @@ func newStartCmd() *cobra.Command {
 			fmt.Fprintf(out, "- Load global config: %s\n", fileStatusLabel(result.GlobalConfig.Path, result.GlobalConfig.Exists))
 			fmt.Fprintf(out, "- Load project config: %s\n", fileStatusLabel(result.ProjectConfig.Path, result.ProjectConfig.Exists))
 			fmt.Fprintf(out, "- Check Ollama API: %s\n", ollamaAPIStatusLine(result.Ollama))
-			fmt.Fprintf(out, "- Check MemPalace: %s\n", installedLabel(result.Tool("mempalace").Installed))
+			if scaffold.SupportsMemory() {
+				fmt.Fprintf(out, "- Check MemPalace: %s\n", installedLabel(result.Tool("mempalace").Installed))
+			}
 			fmt.Fprintf(out, "- Check OpenCode: %s\n", installedLabel(opencodeTool.Installed))
 			fmt.Fprintf(out, "- Check generated OpenCode config: %s\n", fileStatusLabel(result.OpenCodeGeneratedConfig.Path, result.OpenCodeGeneratedConfig.Exists))
 			fmt.Fprintf(out, "- Context model: %s (num_ctx %d, %s)\n", contextModel, numCtx, contextModelLabel)
@@ -70,8 +72,8 @@ func newStartCmd() *cobra.Command {
 				fmt.Fprintf(out, "Ollama API is not responding at %s.\n", result.Ollama.BaseURL)
 				fmt.Fprintln(out, "Start Ollama and try again.")
 			}
-			if !result.Tool("mempalace").Installed {
-				fmt.Fprintln(out, "MemPalace is not installed. Odin recommends it as the primary memory provider.")
+			if scaffold.SupportsMemory() && !result.Tool("mempalace").Installed {
+				fmt.Fprintln(out, "MemPalace is configured as the memory provider but is not installed.")
 			}
 			if !opencodeTool.Installed {
 				fmt.Fprintln(out, "OpenCode is not installed. Install it before expecting Odin to launch the coding agent.")
