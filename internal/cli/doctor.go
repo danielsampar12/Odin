@@ -74,6 +74,10 @@ func newDoctorCmd() *cobra.Command {
 			if result.Ollama.APIAvailable {
 				fmt.Fprintf(out, "- Ollama models: %s\n", summarizeModelNames(result.Ollama.Models, 5))
 			}
+			if result.LegacyShellFunction != "" {
+				fmt.Fprintln(out)
+				fmt.Fprintf(out, "Warning: %s defines an odin() shell function from Odin v1, which hides this odin binary in new shells. Remove the `odin() { ... }` block from that file (Odin v1's uninstall.sh does this), then open a new shell.\n", displayPath(result.LegacyShellFunction))
+			}
 
 			return nil
 		},

@@ -3,6 +3,7 @@ package doctor
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/danielsampar12/odin/internal/config"
@@ -59,6 +60,7 @@ func Collect(ctx context.Context, cwd string) (Result, error) {
 			Path:   openCodeConfigPath,
 			Exists: fileExists(openCodeConfigPath),
 		},
+		LegacyShellFunction: findLegacyShellFunction(osInfo.HomeDir),
 	}, nil
 }
 
@@ -96,4 +98,22 @@ func fileExists(path string) bool {
 	}
 
 	return false
+}
+
+// findLegacyShellFunction returns the rc file where Odin v1's setup defined an odin() function, which
+// hides the odin binary in interactive shells. Odin only reports it; it never edits rc files.
+func findLegacyShellFunction(home string) string {
+	for _, name := range []string{".zshrc", ".bashrc"} {
+		path := filepath.Join(home, name)
+		body, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(body), "\n") {
+			if strings.HasPrefix(line, "odin()") {
+				return path
+			}
+		}
+	}
+	return ""
 }

@@ -26,6 +26,7 @@ type Result struct {
 	GlobalConfig            FileStatus
 	ProjectConfig           FileStatus
 	OpenCodeGeneratedConfig FileStatus
+	LegacyShellFunction     string // rc file where Odin v1 defined an odin() shell function, if any
 }
 
 func (r Result) Tool(name string) plugins.Status {
