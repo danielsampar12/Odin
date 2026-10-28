@@ -16,6 +16,7 @@
 # and `odin start --exec` run once on this machine (and again after upgrading odin) so the context model
 # exists with the current parameters.
 set -u
+export LC_ALL=C # medians print with a decimal point whatever the user's locale
 
 EXERCISM_COMMIT=6d9eed09379935e9721d6a57ba5675f4f803fcb3
 # Fixed split, chosen with random.Random(20261028).sample() over active exercises of difficulty 4-7.
