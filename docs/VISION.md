@@ -1,5 +1,7 @@
 # Odin v2 Vision
 
+This document describes direction. [ROADMAP.md](ROADMAP.md) tracks what exists today and the decisions taken so far.
+
 ## What Odin v2 is
 
 Odin v2 is a local-first AI stack manager.
@@ -8,8 +10,8 @@ Its job is to install, configure, validate, and launch a coherent local AI works
 - Odin CLI: control plane, manager, launcher
 - Ollama: local model runtime
 - OpenCode: coding assistant
-- MemPalace: persistent local memory
-- Powerlevel10k first, Starship later: shell prompt and status integration
+- MemPalace: optional persistent local memory (deferred, off by default)
+- Powerlevel10k first, Starship later: shell prompt and status integration (deferred)
 - Companions: Odin-managed prompts, defaults, and identity
 
 The product goal is simple:
@@ -49,7 +51,7 @@ Machine-level setup.
 
 This command is expected to:
 - detect OS, shell, GPU, RAM, and local tooling
-- verify or install Ollama, OpenCode, and MemPalace
+- verify Ollama and OpenCode, and show their install commands instead of installing them
 - optionally configure shell integration
 - recommend and pull a local model
 - create `~/.odin/config.toml`
@@ -65,10 +67,10 @@ This command is expected to:
 - detect the project and its stack
 - create `.odin/config.toml`
 - create `.odin/rules.md`
-- create or update `AGENTS.md`
+- create `AGENTS.md` when the repository has none (planned: only when asked)
 - choose a project default companion
-- associate a MemPalace hall or namespace
-- generate OpenCode project config
+- record a MemPalace hall when memory is enabled
+- prepare the project for `odin opencode generate`
 
 ### `odin start`
 
@@ -78,9 +80,10 @@ This command is expected to:
 - load global and project config
 - validate the stack
 - ensure Ollama is running
-- ensure MemPalace or MCP connectivity is available
+- when memory is enabled, check MemPalace or MCP connectivity
+- run the model with a context large enough for OpenCode's prompt
+- check that the generated OpenCode config is current
 - refresh lightweight Odin status state
-- generate OpenCode config
 - launch OpenCode
 
 ### `odin doctor`
@@ -95,7 +98,7 @@ Current and planned companion concepts:
 - Baldur: pragmatic pair programmer
 - Tyr: architect and reviewer
 - Thor: fast implementer
-- Loki: creative brainstormer
+- Loki: chaos agent (unconventional approaches)
 - Freya: beginner-friendly teacher
 - Hephaestus: infra and local setup expert
 
@@ -103,7 +106,7 @@ In v2, Odin should eventually translate companion choices into generated OpenCod
 
 ## Memory direction
 
-MemPalace is the intended primary memory provider for Odin v2.
+MemPalace is the preferred memory provider when memory is enabled. Memory integration is deferred: it is off by default and opt-in (`provider = "mempalace"` under `[memory]`), until MemPalace itself has been validated.
 
 The product metaphor fits naturally:
 - Odin
@@ -125,7 +128,7 @@ Future conceptual namespaces include:
 
 ## Shell direction
 
-Shell integration should be adapter-based.
+Shell integration is deferred. When it comes, it should be adapter-based.
 
 Priority:
 - Powerlevel10k first

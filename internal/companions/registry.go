@@ -12,7 +12,7 @@ var Registry = []Companion{
 	{Key: "baldur", Name: "Baldur", Description: "Pragmatic pair programmer"},
 	{Key: "tyr", Name: "Tyr", Description: "Architect and reviewer"},
 	{Key: "thor", Name: "Thor", Description: "Fast implementer"},
-	{Key: "loki", Name: "Loki", Description: "Creative brainstormer"},
+	{Key: "loki", Name: "Loki", Description: "Chaos agent"},
 	{Key: "freya", Name: "Freya", Description: "Beginner-friendly teacher"},
 	{Key: "hephaestus", Name: "Hephaestus", Description: "Infra and local setup expert"},
 }

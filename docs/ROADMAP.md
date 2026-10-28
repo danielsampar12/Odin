@@ -1,110 +1,53 @@
 # Odin v2 Roadmap
 
-## Current phase
+Updated 2026-10-28.
 
-Foundation and migration safety.
+**Next milestone: Odin works for someone who isn't its creator.** Three people on fresh machines (at least one macOS and one Linux) reach a successful, tool-using OpenCode edit through `odin start --exec`, using only the README, within 45 minutes and without help.
 
-Delivered in the current scaffold:
-- preserved the original shell implementation under `legacy/`
-- added repo-root compatibility wrappers for the legacy scripts
-- introduced a Go module and Cobra-based CLI
-- added `odin version`
-- added read-only `odin doctor`
-- added `odin memory status` and `odin memory doctor`
-- added scaffolded `odin setup`
-- added scaffolded `odin init`
-- added scaffolded `odin start`
-- added Ollama model listing, recommendation, and pull scaffolds
-- added project-local OpenCode config generation
-- added a MemPalace detection and MCP-generation scaffold
-- added path helpers, config templates, companion defaults, and plugin detection stubs
+## Done
 
-## Near-term next steps
+- Go CLI with `doctor`, `setup`, `init`, `start`, `model list/recommend/pull`, `opencode status/generate` and `memory status/doctor`.
+- **Stage 0, core loop proven** on an RTX 5070 (12 GB): `qwen3.5:9b-q4_K_M` at a 16k–32k context completed the OpenCode test task in 2 of 3 runs. qwen2.5-coder emitted tool calls as plain text (0 of 6), and Ollama's default 4096-token context truncated OpenCode's ~10k-token prompt. Equally tuned, llama.cpp was within ~4% of Ollama, so Odin keeps Ollama.
+- Catalog-based model recommendations that fit models to memory at the needed context ([MODEL_CATALOG.md](MODEL_CATALOG.md)).
+- OpenCode runs at a 16k or 32k context through a derived Ollama model; `.odin/rules.md` is loaded; `~/.claude/CLAUDE.md` no longer leaks into sessions.
+- `odin start --exec` exits non-zero when it cannot launch.
+- `odin setup` shows the OpenCode install command instead of running it.
+- Memory is off by default; MemPalace is opt-in.
+- `odin doctor` warns about the Odin v1 `odin()` shell function.
+- Accurate README with install, upgrade, uninstall and a list of files Odin creates; v1 docs moved to `legacy/README.md`.
 
-### 1. Stronger diagnostics
+## Stage 1: reliable foundation (in progress)
 
-- detect Ollama API reachability, not just command presence
-- surface installed Ollama models
-- add clearer OpenCode and MemPalace capability checks
-- surface whether generated OpenCode config has explicit MemPalace MCP wiring
-- improve shell integration diagnostics for Powerlevel10k
+- [ ] Merge `v2` into `main`, port `main`'s companion-temperature change into `legacy/setup.sh`, and freeze legacy.
+- [ ] Tag `v0.2.0`; GitHub Actions for `go vet` and `go test`; release binaries with GoReleaser.
+- [ ] Clean-install test in a container.
+- [ ] `odin opencode generate` exits non-zero when it refuses to overwrite a file.
 
-### 2. Setup guidance
+## Stage 2: repeatable project workflow
 
-- add profile selection for beginner vs developer mode
-- add interactive confirmation flow for recommended setup
-- add safe install and verify adapters for Ollama, OpenCode, and MemPalace
-- register global companions during setup
+- [ ] `odin init` creates `AGENTS.md` only when asked.
+- [ ] Config ownership: `.odin/config.toml` holds shared intent; machine-specific values (model, Ollama URL) come from `~/.odin/config.toml`.
+- [ ] Detect a hand-edited or stale generated config before regenerating.
+- [ ] Show where each effective OpenCode setting comes from (global OpenCode config, Odin's config, a project `opencode.json`).
+- [ ] Replace the hand-written config parser with a TOML library.
 
-### 3. Project initialization
+## Stage 3: companions as OpenCode agents (after the milestone)
 
-- generate richer `.odin/config.toml`
-- generate companion-aware `AGENTS.md`
-- detect language and framework defaults
-- associate projects with MemPalace halls or namespaces
-- generate OpenCode project config
+- [ ] Map two or three companions to OpenCode agents with their own prompt, tools and permissions, using the existing `roles/` prompts.
 
-### 4. Start and launch flow
+## Open risks
 
-- validate global and project config
-- ensure Ollama is running
-- ensure MemPalace connectivity is available
-- refresh Odin status cache
-- launch OpenCode with generated config
+- Qwen3.5/3.6 think by default, and OpenCode 1.19 offers no way to turn it off for Qwen models.
+- OpenCode 1.x only gets triage upstream now; check compatibility with OpenCode 2.x.
+- Model picks for 24 GB GPUs, Apple Silicon and CPU-only machines are unmeasured.
+- macOS is untested.
 
-### 5. Memory integration
+## Deferred
 
-- keep MemPalace as Odin's primary intended memory provider
-- support explicit OpenCode MCP wiring through project-local generated config
-- represent project memory halls in `.odin/config.toml`
-- keep Markdown or flat-file exports as fallback, debug, or backup paths only
-- shape memory namespaces around:
-  - `odin:user/preferences`
-  - `odin:user/hardware`
-  - `odin:project:<project>/architecture`
-  - `odin:project:<project>/decisions`
-  - `odin:project:<project>/sessions`
-  - `odin:companion:<name>/diary`
-  - `odin:companion:<name>/style`
+- MemPalace / MCP memory integration beyond the current opt-in.
+- Shared team workflows and onboarding.
+- Shell prompt integration (Powerlevel10k, Starship).
 
-### 6. Companion management
+## Non-goals
 
-- add `odin companion list`
-- add `odin companion inspect`
-- add `odin companion install`
-- preserve compatibility with the existing role markdown files
-
-### 7. Model management
-
-- add `odin model recommend`
-- add model pull and verify flows
-- keep recommendations hardware-aware and local-first
-
-## Explicit non-goals for the MVP
-
-- building a new coding agent loop
-- building a new LLM runtime
-- implementing deep RAG
-- implementing a custom memory database
-- implementing a custom prompt engine
-
-## Architecture direction
-
-Odin should remain the glue layer:
-- adapters around existing tools
-- inspectable generated config
-- small, composable packages
-- safe and idempotent commands
-
-## Suggested next implementation step
-
-Improve `odin doctor` with:
-- Ollama API detection
-- model listing
-- clearer local runtime health reporting
-
-After that:
-- add `odin model recommend`
-- add companion registry commands
-- add a MemPalace adapter scaffold
-- add an OpenCode config generator
+- Building an agent loop, a model runtime, a vector database, a RAG stack or a prompt engine.
