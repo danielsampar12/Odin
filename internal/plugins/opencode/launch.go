@@ -26,7 +26,9 @@ func RelativeConfigPath() string {
 // launchEnv keeps user-global instructions out of every Odin session: the first stops OpenCode from
 // loading ~/.claude/CLAUDE.md and other Claude Code files, the second from listing every skill under
 // ~/.claude/skills and ~/.agents/skills in the system prompt. Project skills in .opencode/skills still load.
-var launchEnv = []string{"OPENCODE_DISABLE_CLAUDE_CODE=1", "OPENCODE_DISABLE_EXTERNAL_SKILLS=1"}
+// The third keeps OpenCode from downloading language servers: the generated config turns LSP on, and only
+// servers the user already installed (gopls, typescript-language-server, ...) should run.
+var launchEnv = []string{"OPENCODE_DISABLE_CLAUDE_CODE=1", "OPENCODE_DISABLE_EXTERNAL_SKILLS=1", "OPENCODE_DISABLE_LSP_DOWNLOAD=1"}
 
 func LaunchCommand(binaryPath string) string {
 	name := "opencode"
