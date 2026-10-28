@@ -11,6 +11,7 @@
 #        TIMEOUT=600     seconds per `opencode run`
 #        BENCH_DIR=      where repos, logs and results.tsv go (default: a new dir under ~/.cache/odin-bench)
 #        EXERCISM_DIR=   checkout of github.com/exercism/go (cloned and pinned automatically)
+#        TELEMETRY=      CSV written by scripts/telemetry.sh; enables the thermal pause and the guardrail report
 # Needs odin, opencode, ollama, go, git and jq on PATH, a running Ollama with the configured model,
 # and `odin start --exec` run once on this machine (and again after upgrading odin) so the context model
 # exists with the current parameters.
@@ -47,7 +48,27 @@ git -C "$EXERCISM_DIR" -c advice.detachedHead=false checkout -q "$EXERCISM_COMMI
 
 mkdir -p "$BENCH_DIR"
 echo "odin: $(odin version) ($(command -v odin)); opencode $(opencode --version); agent: ${AGENT:-default}" | tee "$BENCH_DIR/versions.txt"
-[ -f "$OUT" ] || printf 'task\trun\tpass\tseconds\texit\ttools\ttool_errors\ttests_edited\tclaimed_pass\tfalse_claim\tprocessor\tcontext\n' > "$OUT"
+[ -f "$OUT" ] || printf 'task\trun\tpass\tseconds\texit\ttools\ttool_errors\ttests_edited\tclaimed_pass\tfalse_claim\tprocessor\tcontext\tstarted\n' > "$OUT"
+# One model on the GPU at a time: unload whatever another config left loaded.
+ollama ps | awk 'NR > 1 {print $1}' | while read -r loaded; do ollama stop "$loaded"; done
+BENCH_START=$(date +%s)
+SWAP_START=$(free -m | awk '/^Swap:/ {print $3}')
+
+# Pauses before a run when the previous one got the GPU to 83 C, set a thermal-slowdown flag or got the
+# CPU package to 90 C, until both are below 70 C.
+cool_down() {
+  [ -n "${TELEMETRY:-}" ] && [ -f "$TELEMETRY" ] || return 0
+  awk -F, -v since="${1:-0}" 'NR > 1 && $1 >= since && ($2 >= 83 || $6 == "Active" || $7 == "Active" || ($8 != "?" && $8 >= 90)) {hot = 1} END {exit !hot}' "$TELEMETRY" || return 0
+  echo "$(date +%T) thermal guardrail: pausing until GPU and CPU are below 70 C" | tee -a "$BENCH_DIR/guardrails.log"
+  while true; do
+    local gpu cpu
+    gpu=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits | head -1)
+    cpu=$(sensors 2>/dev/null | awk '/^Package id 0:/ {gsub(/[^0-9.]/, "", $4); print int($4); exit}')
+    [ "${gpu:-0}" -lt 70 ] && [ "${cpu:-0}" -lt 70 ] && break
+    sleep 10
+  done
+  echo "$(date +%T) thermal guardrail: resumed" >> "$BENCH_DIR/guardrails.log"
+}
 
 # Grants what a user would approve for a coding task (the Go toolchain and read-only commands) without
 # OpenCode's interactive prompts; nothing that deletes or moves files. OpenCode checks each part of
@@ -123,8 +144,10 @@ run_one() { # task run
   launch_env=$(odin opencode status | sed -n 's/^Planned launch command: //p' | grep -oE '[A-Z_]+=[^ ]+')
   [ -n "$launch_env" ] || { echo "bench: could not read the launch command from odin opencode status" >&2; exit 1; }
 
+  cool_down "${LAST_START:-$BENCH_START}"
   local start code secs
   start=$(date +%s)
+  LAST_START=$start
   # shellcheck disable=SC2086 # launch_env is a list of VAR=value words
   env $launch_env timeout "$TIMEOUT" opencode run --format json ${AGENT:+--agent "$AGENT"} "$prompt" > "$log" 2>&1 < /dev/null
   code=$?
@@ -154,8 +177,8 @@ run_one() { # task run
     timeout 300 go test ./... > "$BENCH_DIR/$task-$run.gotest.txt" 2>&1 && pass=yes
   fi
   [ "$claimed" = yes ] && [ "$pass" = no ] && false_claim=yes
-  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$task" "$run" "$pass" "$secs" "$code" "$tools" "$tool_errors" \
-    "$edited" "$claimed" "$false_claim" "${processor:-?}" "${context:-?}" >> "$OUT"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$task" "$run" "$pass" "$secs" "$code" "$tools" "$tool_errors" \
+    "$edited" "$claimed" "$false_claim" "${processor:-?}" "${context:-?}" "$start" >> "$OUT"
   tail -1 "$OUT"
   cd - >/dev/null || return 1
 }
@@ -183,3 +206,23 @@ END {
   s = ""; for (i = 1; i <= total; i++) s = s " " all[i]
   printf "%-20s %3d/%-2d %10s %12d   pass@1 %.0f%%\n", "TOTAL", passes, total, median(s), falses, 100 * passes / total
 }' "$OUT"
+
+# Guardrails: peaks over this benchmark from the telemetry, and the reasons to reject the config.
+[ -n "${TELEMETRY:-}" ] && [ -f "$TELEMETRY" ] || exit 0
+oom=$(journalctl -k --since "@$BENCH_START" --no-pager 2>/dev/null | grep -ciE 'out of memory|oom-kill')
+median=$(awk -F'\t' 'NR > 1 {print $4}' "$OUT" | sort -n | awk '{a[NR] = $1} END {print (NR % 2 ? a[(NR + 1) / 2] : (a[NR / 2] + a[NR / 2 + 1]) / 2)}')
+awk -F, -v since="$BENCH_START" -v swap0="$SWAP_START" -v oom="${oom:-0}" -v median="$median" \
+  -v pauses="$(grep -c pausing "$BENCH_DIR/guardrails.log" 2>/dev/null || echo 0)" '
+NR > 1 && $1 >= since {
+  if ($2 > gpu) gpu = $2; if ($4 > vram) vram = $4; if ($8 != "?" && $8 > cpu) cpu = $8
+  if (minram == "" || $9 < minram) minram = $9; if ($10 > swap) swap = $10
+  if ($6 == "Active" || $7 == "Active") throttled++
+}
+END {
+  printf "Peaks: GPU %d C, CPU %.0f C, VRAM %d MiB, RAM available min %d MiB, swap max %d MiB (start %d); thermal pauses %d, throttled samples %d\n", gpu, cpu, vram, minram, swap, swap0, pauses, throttled
+  if (minram < 4096) reject = reject " available RAM below 4 GiB;"
+  if (swap - swap0 > 2048) reject = reject " swap grew more than 2 GiB;"
+  if (oom > 0) reject = reject " a process was killed for running out of memory;"
+  if (median > 600) reject = reject " median task over 10 min;"
+  print (reject == "" ? "Guardrails: ok" : "Guardrails: REJECT:" reject)
+}' "$TELEMETRY" | tee -a "$BENCH_DIR/guardrails.log"
