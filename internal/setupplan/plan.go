@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/danielsampar12/odin/internal/companions"
 	"github.com/danielsampar12/odin/internal/doctor"
@@ -84,6 +85,8 @@ type Environment struct {
 	Pip3      system.CommandStatus
 	UV        system.CommandStatus
 	Pipx      system.CommandStatus
+
+	PythonExternallyManaged bool
 }
 
 type Plan struct {
@@ -103,7 +106,7 @@ func Build(ctx context.Context, cwd string) (Plan, error) {
 		return Plan{}, err
 	}
 
-	environment := detectEnvironment()
+	environment := detectEnvironment(ctx)
 	recommendation := buildRecommendation(result)
 	ollamaInstall := planOllamaInstall(result, environment)
 	ollamaStartup := planOllamaStartup(result, environment)
@@ -143,7 +146,7 @@ func buildRecommendation(result doctor.Result) Recommendation {
 	}
 }
 
-func detectEnvironment() Environment {
+func detectEnvironment(ctx context.Context) Environment {
 	return Environment{
 		Curl:      system.DetectCommand("curl"),
 		Systemctl: system.DetectCommand("systemctl"),
@@ -157,7 +160,21 @@ func detectEnvironment() Environment {
 		Pip3:      system.DetectCommand("pip3"),
 		UV:        system.DetectCommand("uv"),
 		Pipx:      system.DetectCommand("pipx"),
+
+		PythonExternallyManaged: pythonExternallyManaged(ctx),
 	}
+}
+
+// pythonExternallyManaged reports whether pip installs into python3 are refused under PEP 668:
+// an EXTERNALLY-MANAGED marker in the stdlib directory, outside a virtualenv.
+// shortcut: probes python3, not the pip binary on PATH; switch to `pip --version` or `python3 -m pip` if they diverge in practice.
+func pythonExternallyManaged(ctx context.Context) bool {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	output, err := system.RunCommand(ctx, "", "python3", "-c",
+		"import os, sys, sysconfig; print(sys.prefix == sys.base_prefix and os.path.exists(os.path.join(sysconfig.get_path('stdlib'), 'EXTERNALLY-MANAGED')))")
+	return err == nil && output == "True"
 }
 
 func buildSteps(result doctor.Result, recommendation Recommendation, ollamaInstall, ollamaStartup, openCodeInstall, memPalaceInstall InstallMethod) []Step {
@@ -564,6 +581,15 @@ func planOpenCodeInstall(result doctor.Result, environment Environment) InstallM
 }
 
 func planMemPalaceInstall(result doctor.Result, environment Environment) InstallMethod {
+	if environment.PythonExternallyManaged {
+		return InstallMethod{
+			Name:      "Manual installation outside the system Python",
+			Command:   "pipx install mempalace",
+			Notes:     "This Python is externally managed (PEP 668), so `pip install mempalace` would be refused. MemPalace docs only show pip, so Odin keeps this manual; pipx, `uv tool install mempalace`, or a virtualenv work around it.",
+			Automatic: false,
+		}
+	}
+
 	if result.OS.Name != "linux" {
 		return InstallMethod{
 			Name:      "Manual installation",

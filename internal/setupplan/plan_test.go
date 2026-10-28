@@ -45,6 +45,23 @@ func TestPlanMemPalaceInstallNeedsDocumentedPip(t *testing.T) {
 	}
 }
 
+func TestPlanMemPalaceInstallManualWhenPythonExternallyManaged(t *testing.T) {
+	method := planMemPalaceInstall(doctor.Result{
+		OS: system.OSInfo{Name: "linux"},
+	}, Environment{
+		Python3:                 system.CommandStatus{Name: "python3", Installed: true, Path: "/usr/bin/python3"},
+		Pip:                     system.CommandStatus{Name: "pip", Installed: true, Path: "/usr/bin/pip"},
+		PythonExternallyManaged: true,
+	})
+
+	if method.Automatic {
+		t.Fatalf("Automatic = true, want false when PEP 668 blocks pip")
+	}
+	if method.Command != "pipx install mempalace" {
+		t.Fatalf("unexpected command: %q", method.Command)
+	}
+}
+
 func TestBuildStepsModelPullNeededWhenOllamaAPIReady(t *testing.T) {
 	result := doctor.Result{
 		CurrentDir: "/tmp/project",
