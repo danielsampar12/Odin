@@ -1,0 +1,174 @@
+package opencode
+
+import (
+	"errors"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/danielsampar12/odin/internal/config"
+)
+
+func TestWriteGeneratedConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	projectDir := t.TempDir()
+	if err := os.MkdirAll(config.ProjectDir(projectDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(config.GlobalDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(config.GlobalConfigPath(), []byte(`profile = "developer"
+
+[runtime]
+provider = "ollama"
+base_url = "http://localhost:11434"
+
+[model]
+default = "global-model"
+
+[companion]
+default = "freya"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(config.ProjectConfigPath(projectDir), []byte(`name = "demo"
+
+[runtime]
+provider = "ollama"
+
+[model]
+default = "project-model"
+
+[companion]
+default = "baldur"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 16384})
+	if err != nil {
+		t.Fatalf("WriteGeneratedConfig error = %v", err)
+	}
+	if !result.Written {
+		t.Fatalf("expected config to be written")
+	}
+
+	body, err := os.ReadFile(config.ProjectGeneratedOpenCodeConfigPath(projectDir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(body)
+	if !strings.Contains(content, ManagedMarker) {
+		t.Fatalf("generated config is missing managed marker")
+	}
+	if !strings.Contains(content, `"model": "ollama/project-model:latest-ctx16k"`) {
+		t.Fatalf("generated config is missing the context model reference: %s", content)
+	}
+	if !strings.Contains(content, `"context": 16384`) || !strings.Contains(content, `"output": 4096`) {
+		t.Fatalf("generated config is missing the model context limit: %s", content)
+	}
+	if !GeneratedConfigUses(projectDir, "ollama/project-model:latest-ctx16k") || GeneratedConfigUses(projectDir, "ollama/project-model:latest-ctx32k") {
+		t.Fatalf("GeneratedConfigUses does not match the generated model")
+	}
+	if !strings.Contains(content, `"baseURL": "http://localhost:11434/v1"`) {
+		t.Fatalf("generated config is missing Ollama v1 base URL: %s", content)
+	}
+	if !strings.Contains(content, `"instructions": [`) || !strings.Contains(content, `".odin/rules.md"`) {
+		t.Fatalf("generated config is missing rules instruction reference: %s", content)
+	}
+}
+
+func TestWriteGeneratedConfigRefusesUnmanagedFile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	projectDir := t.TempDir()
+	if err := os.MkdirAll(config.ProjectGeneratedDir(projectDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	path := config.ProjectGeneratedOpenCodeConfigPath(projectDir)
+	if err := os.WriteFile(path, []byte(`{"custom":true}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := WriteGeneratedConfig(projectDir, GenerateOptions{Context: 16384})
+	if !errors.Is(err, ErrUnmanagedGeneratedConfig) {
+		t.Fatalf("error = %v, want ErrUnmanagedGeneratedConfig", err)
+	}
+
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{Force: true, Context: 16384})
+	if err != nil {
+		t.Fatalf("force WriteGeneratedConfig error = %v", err)
+	}
+	if !result.Written {
+		t.Fatalf("expected forced regeneration to write file")
+	}
+}
+
+func TestWriteGeneratedConfigWithMemory(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	projectDir := t.TempDir()
+	if err := os.MkdirAll(config.ProjectDir(projectDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(config.ProjectConfigPath(projectDir), []byte(`name = "demo"
+
+[runtime]
+provider = "ollama"
+
+[memory]
+provider = "mempalace"
+hall = "demo-hall"
+
+[model]
+default = "project-model"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := WriteGeneratedConfig(projectDir, GenerateOptions{WithMemory: true, Context: 16384})
+	if err != nil {
+		t.Fatalf("WriteGeneratedConfig error = %v", err)
+	}
+	if !result.Written {
+		t.Fatalf("expected config to be written")
+	}
+
+	body, err := os.ReadFile(config.ProjectGeneratedOpenCodeConfigPath(projectDir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(body)
+	if !strings.Contains(content, `// MemPalace MCP: enabled`) {
+		t.Fatalf("generated config is missing MemPalace marker: %s", content)
+	}
+	if !strings.Contains(content, `"mempalace"`) || !strings.Contains(content, `mempalace.mcp_server`) {
+		t.Fatalf("generated config is missing MemPalace MCP wiring: %s", content)
+	}
+}
+
+func TestEnsureV1Endpoint(t *testing.T) {
+	testCases := []struct {
+		input string
+		want  string
+	}{
+		{input: "http://localhost:11434", want: "http://localhost:11434/v1"},
+		{input: "http://localhost:11434/", want: "http://localhost:11434/v1"},
+		{input: "http://localhost:11434/v1", want: "http://localhost:11434/v1"},
+	}
+
+	for _, tc := range testCases {
+		if got := ensureV1Endpoint(tc.input); got != tc.want {
+			t.Fatalf("ensureV1Endpoint(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}

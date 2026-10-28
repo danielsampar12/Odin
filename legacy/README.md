@@ -1,0 +1,180 @@
+# Odin v1: legacy shell setup
+
+This directory preserves Odin's original shell-based implementation: Ollama + aichat, companions as aichat roles, saved sessions, and an optional RAG flow. It is frozen: new work happens in the Go CLI (Odin v2, see the [main README](../README.md)).
+
+> [!WARNING]
+> v1's setup adds an `odin()` shell function to `~/.zshrc` or `~/.bashrc`. If you also install Odin v2, that function hides the v2 binary. Run `uninstall.sh` below, or delete the `odin() { ... }` block yourself.
+
+Contents:
+- `setup.sh`: interactive machine bootstrap for Ollama + aichat
+- `launch-session.sh`: session launcher with optional RAG detection
+- `index-project.sh`: project indexing for the legacy RAG flow
+- `add-companion.sh`: custom companion installer for the legacy role system
+- `uninstall.sh`: legacy teardown script
+- `coder.Modelfile.example`: shell-era model template example
+
+Repo-root wrapper scripts remain in place so older entrypoints like `./setup.sh` still forward into this directory. Legacy scripts use the role files in the repo-root `roles/` directory.
+
+## Requirements
+
+- **macOS or Linux**
+- [Homebrew](https://brew.sh) — required on macOS. On Linux the script handles everything without it.
+
+## Install
+
+> [!IMPORTANT]
+> Setup downloads two models: the coding model (**10–20GB** depending on your hardware) and `nomic-embed-text` (~274MB) for RAG. Make sure you're on a good connection and have time — this is a one-time step.
+
+```bash
+git clone https://github.com/danielsampar12/Odin.git ~/ai/odin
+cd ~/ai/odin
+chmod +x setup.sh
+./setup.sh
+```
+
+The script will introduce itself, ask for a name, let you pick your companion, detect your hardware, pull the right model, and configure everything. Reload your shell when it's done:
+
+```bash
+source ~/.zshrc  # or ~/.bashrc
+```
+
+## Companions
+
+You don't get a generic chatbot. You pick who rides with you into battle.
+
+### ✨ Baldur — pair programmer
+
+Most beloved of all gods in Asgard. Patient, wise, trusted by everyone — nobody could hate Baldur, and that patience shows in how he works.
+
+- **Style:** asks before acting, suggests an approach and waits for your go-ahead
+- **Best for:** complex decisions, architecture, learning, understanding the codebase
+- **Will push back?** yes — if you're heading toward a bad pattern he'll tell you why before touching anything
+- **Explains:** key decisions as he writes, so you never lose track of what's happening
+
+### ⚖️ Tyr — architect / reviewer
+
+God of law and justice. He sacrificed his hand to bind the wolf Fenrir — he knew exactly what it would cost and paid it anyway. That's the mindset of someone who reviews code and says "this will hurt later."
+
+- **Style:** reviews from the outside in — structure, abstractions, and whether you're solving the right problem
+- **Best for:** code reviews, architecture decisions, spotting technical debt before it bites
+- **Will push back?** yes, and he'll tell you exactly why it will hurt later — with an alternative
+- **Explains:** the systemic risk, not just the immediate bug
+
+### ⚡ Thor — implementer
+
+God of thunder. Direct, powerful, and not exactly known for overthinking. The hammer doesn't ask questions.
+
+- **Style:** acts first, mentions it if something was off
+- **Best for:** getting things done fast, clear and well-defined tasks
+- **Will push back?** only if something is genuinely wrong — one question, no more
+- **Explains:** only when the why isn't obvious from the code itself
+
+### 🃏 Loki — chaos agent
+
+> [!WARNING]
+> Not recommended for production. Review everything he gives you. You have been warned.
+
+Shapeshifter. Trickster. The god who always finds a third option nobody else considered. He will solve your problem — just not the way you expected.
+
+- **Style:** ignores conventions when a better solution exists outside them
+- **Best for:** creative problems, breaking out of tunnel vision, exploring unconventional approaches
+- **Will push back?** he'll reframe the entire question
+- **Explains:** why his approach works and what could go wrong — he's chaotic, not irresponsible
+
+> [!TIP]
+> You can override your default companion per session.
+
+## Usage
+
+> [!NOTE]
+> Examples below use `odin`, but the setup script lets you pick any name.
+> Odin has over two hundred names across the nine realms.
+> Whatever you chose, use that instead.
+
+```bash
+odin start          # awaken
+odin stop           # return to Asgard
+
+odin my-project     # start or resume a session (uses your default companion)
+odin new            # fresh unnamed session
+odin list           # see all sessions
+
+odin baldur my-project  # summon Baldur for this session
+odin tyr my-project     # summon Tyr for this session
+odin thor my-project    # summon Thor for this session
+odin loki my-project    # summon Loki (you were warned)
+
+odin add                # forge a new custom companion
+odin remove my-project  # remove a session
+
+odin index my-project   # index project files for RAG (run once per project)
+# next time you start a session named 'my-project', RAG is detected automatically
+```
+
+Sessions are saved automatically and resume with full history. You only explain your project once.
+
+## Configuration
+
+**Change a companion's personality** — edit the role file and copy it over:
+
+```bash
+vim ~/ai/odin/roles/baldur.md
+cp ~/ai/odin/roles/baldur.md ~/.config/aichat/roles/baldur.md
+# on macOS: ~/Library/Application\ Support/aichat/roles/baldur.md
+```
+
+**Switch your default companion or model** — just re-run setup:
+
+```bash
+./setup.sh
+```
+
+**Add a custom companion** — run `odin add` and follow the prompts. You can either provide a path to an existing `.md` file or paste the role definition directly. The companion is installed alongside the built-ins and works the same way:
+
+```bash
+odin add              # interactive — name it, then provide a file path or paste text
+odin freya my-project # once added, summon it like any other companion
+```
+
+**aichat config** lives at `~/.config/aichat/config.yaml` (Linux) or `~/Library/Application Support/aichat/config.yaml` (macOS).
+
+## Uninstall
+
+```bash
+cd ~/ai/odin
+./uninstall.sh
+```
+
+Removes Ollama, aichat, configs, and the shell function. Asks before touching models and sessions since those are large or personal.
+
+## Hardware & models
+
+The setup script auto-detects your hardware and recommends a model from this table. It reflects 2025 choices; Odin v2 uses a newer catalog (see [docs/MODEL_CATALOG.md](../docs/MODEL_CATALOG.md)).
+
+| Hardware | Recommended | Safe fallback |
+|---|---|---|
+| NVIDIA 24GB+ VRAM | `qwen3-coder:30b` | `qwen2.5-coder:32b` |
+| NVIDIA 12–16GB VRAM | `qwen2.5-coder:14b-instruct-q5_K_M` | `q4_K_M` |
+| NVIDIA 8GB VRAM | `qwen2.5-coder:7b` | `qwen2.5-coder:7b` |
+| NVIDIA <8GB VRAM | `qwen2.5-coder:3b` | `qwen2.5-coder:3b` |
+| Apple Silicon 48GB+ | `qwen3-coder:30b` | `qwen2.5-coder:14b-instruct-q5_K_M` |
+| Apple Silicon 32GB | `qwen2.5-coder:14b-instruct-q5_K_M` | `qwen2.5-coder:7b` |
+| Apple Silicon 16GB | `qwen2.5-coder:7b` | `qwen2.5-coder:3b` |
+| Apple Silicon 8GB | `qwen2.5-coder:3b` | `qwen2.5-coder:3b` |
+| Intel Mac / no GPU | `qwen2.5-coder:7b` | `qwen2.5-coder:3b` |
+
+> [!NOTE]
+> Apple Silicon uses unified memory — your RAM is your VRAM.
+
+## Storage
+
+| What | Path | Size |
+|---|---|---|
+| Models | `~/.ollama/models/` | ~10–20GB per model |
+| Sessions | `~/ai/sessions/` | Tiny (plain text) |
+| aichat config | `~/.config/aichat/` (Linux) or `~/Library/Application Support/aichat/` (macOS) | Tiny |
+
+```bash
+ollama list              # see downloaded models
+ollama rm <model-name>   # free up space
+```

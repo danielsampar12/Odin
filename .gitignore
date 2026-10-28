@@ -1,3 +1,14 @@
-sessions/
-*.log
-.env
+# Build artifacts
+/odin
+/bin/
+/dist/
+/build/
+*.test
+*.out
+coverage.out
+
+# Local Odin state
+.odin/
+
+# graphify knowledge graph output
+graphify-out/
