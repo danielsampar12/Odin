@@ -20,10 +20,11 @@ Updated 2026-10-28.
 - CI (GitHub Actions): gofmt, `go vet`, `go test` and the smoke test on every push and pull request.
 - `v2` merged into `main` (PR #4); `main`'s v1 temperature fix is ported into `legacy/setup.sh`, and legacy is frozen.
 - Release workflow: pushing a `v*` tag builds Linux and macOS binaries (amd64, arm64) with checksums and publishes a GitHub release.
+- **v0.2.0 released** (2026-10-28): https://github.com/danielsampar12/Odin/releases/tag/v0.2.0
 
-## Stage 1: reliable foundation (in progress)
+## Stage 1: reliable foundation (done)
 
-- [ ] Tag `v0.2.0` to publish the first release.
+Next: run the milestone with three testers before starting Stage 3.
 
 ## Stage 2: repeatable project workflow
 
