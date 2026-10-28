@@ -516,6 +516,8 @@ func planOllamaStartup(result doctor.Result, environment Environment) InstallMet
 	}
 }
 
+// planOpenCodeInstall only suggests a command: Odin never installs OpenCode itself, so the user stays in
+// control of what gets added to their machine.
 func planOpenCodeInstall(result doctor.Result, environment Environment) InstallMethod {
 	if result.OS.Name != "linux" {
 		return InstallMethod{
@@ -531,7 +533,7 @@ func planOpenCodeInstall(result doctor.Result, environment Environment) InstallM
 			Name:      "Node.js npm global install",
 			Command:   "npm install -g opencode-ai",
 			Notes:     joinNonEmpty([]string{"Official OpenCode docs also support bun, pnpm, yarn, Homebrew, and an install script.", openCodeAlternatives(environment, "npm")}),
-			Automatic: true,
+			Automatic: false,
 		}
 	}
 	if environment.Bun.Installed {
@@ -539,7 +541,7 @@ func planOpenCodeInstall(result doctor.Result, environment Environment) InstallM
 			Name:      "Bun global install",
 			Command:   "bun install -g opencode-ai",
 			Notes:     joinNonEmpty([]string{"Official OpenCode docs also support npm, pnpm, yarn, Homebrew, and an install script.", openCodeAlternatives(environment, "bun")}),
-			Automatic: true,
+			Automatic: false,
 		}
 	}
 	if environment.PNPM.Installed {
@@ -547,7 +549,7 @@ func planOpenCodeInstall(result doctor.Result, environment Environment) InstallM
 			Name:      "pnpm global install",
 			Command:   "pnpm install -g opencode-ai",
 			Notes:     joinNonEmpty([]string{"Official OpenCode docs also support npm, bun, yarn, Homebrew, and an install script.", openCodeAlternatives(environment, "pnpm")}),
-			Automatic: true,
+			Automatic: false,
 		}
 	}
 	if environment.Yarn.Installed {
@@ -555,7 +557,7 @@ func planOpenCodeInstall(result doctor.Result, environment Environment) InstallM
 			Name:      "Yarn global install",
 			Command:   "yarn global add opencode-ai",
 			Notes:     joinNonEmpty([]string{"Official OpenCode docs also support npm, bun, pnpm, Homebrew, and an install script.", openCodeAlternatives(environment, "yarn")}),
-			Automatic: true,
+			Automatic: false,
 		}
 	}
 	if environment.Brew.Installed {
@@ -563,7 +565,7 @@ func planOpenCodeInstall(result doctor.Result, environment Environment) InstallM
 			Name:      "Homebrew install",
 			Command:   "brew install anomalyco/tap/opencode",
 			Notes:     "OpenCode docs recommend the anomalyco tap for the most up-to-date releases.",
-			Automatic: true,
+			Automatic: false,
 		}
 	}
 

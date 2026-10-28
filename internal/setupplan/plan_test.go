@@ -24,8 +24,8 @@ func TestPlanOpenCodeInstallPrefersNPM(t *testing.T) {
 	if method.Command != "npm install -g opencode-ai" {
 		t.Fatalf("Command = %q, want npm install -g opencode-ai", method.Command)
 	}
-	if !method.Automatic {
-		t.Fatalf("Automatic = false, want true")
+	if method.Automatic {
+		t.Fatalf("Automatic = true, want false: Odin only suggests the OpenCode install command")
 	}
 }
 
