@@ -12,7 +12,8 @@
 #        BENCH_DIR=      where repos, logs and results.tsv go (default: a new dir under ~/.cache/odin-bench)
 #        EXERCISM_DIR=   checkout of github.com/exercism/go (cloned and pinned automatically)
 # Needs odin, opencode, ollama, go, git and jq on PATH, a running Ollama with the configured model,
-# and `odin start --exec` run once on this machine so the context model exists.
+# and `odin start --exec` run once on this machine (and again after upgrading odin) so the context model
+# exists with the current parameters.
 set -u
 
 EXERCISM_COMMIT=6d9eed09379935e9721d6a57ba5675f4f803fcb3
@@ -117,10 +118,15 @@ run_one() { # task run
   ollama list | awk 'NR>1{print $1}' | grep -qx "$model" \
     || { echo "bench: Ollama model $model is missing; run \`odin start --exec\` once to create it" >&2; exit 1; }
 
+  # Launch with the environment this odin version uses for OpenCode (OPENCODE_CONFIG and friends).
+  local launch_env
+  launch_env=$(odin opencode status | sed -n 's/^Planned launch command: //p' | grep -oE '[A-Z_]+=[^ ]+')
+  [ -n "$launch_env" ] || { echo "bench: could not read the launch command from odin opencode status" >&2; exit 1; }
+
   local start code secs
   start=$(date +%s)
-  OPENCODE_CONFIG=.odin/generated/opencode.jsonc OPENCODE_DISABLE_CLAUDE_CODE=1 \
-    timeout "$TIMEOUT" opencode run --format json ${AGENT:+--agent "$AGENT"} "$prompt" > "$log" 2>&1 < /dev/null
+  # shellcheck disable=SC2086 # launch_env is a list of VAR=value words
+  env $launch_env timeout "$TIMEOUT" opencode run --format json ${AGENT:+--agent "$AGENT"} "$prompt" > "$log" 2>&1 < /dev/null
   code=$?
   secs=$(( $(date +%s) - start ))
   local ps_line processor context
