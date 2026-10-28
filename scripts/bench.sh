@@ -12,6 +12,9 @@
 #        BENCH_DIR=      where repos, logs and results.tsv go (default: a new dir under ~/.cache/odin-bench)
 #        EXERCISM_DIR=   checkout of github.com/exercism/go (cloned and pinned automatically)
 #        TELEMETRY=      CSV written by scripts/telemetry.sh; enables the thermal pause and the guardrail report
+#        STOP_MIN_AVAIL_MIB=  with TELEMETRY: stop the benchmark mid-run if available RAM drops below this
+#        STOP_ON_THERMAL=1    with TELEMETRY: stop instead of pausing at 83 C GPU, 90 C CPU or a slowdown flag
+#                             (either one also stops on a kernel OOM kill)
 # Needs odin, opencode, ollama, go, git and jq on PATH, a running Ollama with the configured model,
 # and `odin start --exec` run once on this machine (and again after upgrading odin) so the context model
 # exists with the current parameters.
@@ -57,6 +60,17 @@ SWAP_START=$(free -m | awk '/^Swap:/ {print $3}')
 
 # Pauses before a run when the previous one got the GPU to 83 C, set a thermal-slowdown flag or got the
 # CPU package to 90 C, until both are below 70 C.
+# Prints why the benchmark must stop now, if a STOP_* limit is set and was crossed since $1.
+guard_breach() {
+  [ -n "${TELEMETRY:-}" ] && [ -f "$TELEMETRY" ] || return 0
+  [ -n "${STOP_MIN_AVAIL_MIB:-}${STOP_ON_THERMAL:-}" ] || return 0
+  awk -F, -v since="$1" -v min="${STOP_MIN_AVAIL_MIB:-0}" -v thermal="${STOP_ON_THERMAL:-}" 'NR > 1 && $1 >= since {
+    if ($9 != "?" && $9 < min) { print "RAM available " $9 " MiB < " min; exit }
+    if (thermal && ($2 >= 83 || $6 == "Active" || $7 == "Active" || ($8 != "?" && $8 >= 90))) { print "thermal limit: GPU " $2 " C, CPU " $8 " C"; exit }
+  }' "$TELEMETRY"
+  journalctl -k --since "@$BENCH_START" --no-pager 2>/dev/null | grep -qiE 'out of memory|oom-kill' && echo "kernel OOM kill"
+}
+
 cool_down() {
   [ -n "${TELEMETRY:-}" ] && [ -f "$TELEMETRY" ] || return 0
   awk -F, -v since="${1:-0}" 'NR > 1 && $1 >= since && ($2 >= 83 || $6 == "Active" || $7 == "Active" || ($8 != "?" && $8 >= 90)) {hot = 1} END {exit !hot}' "$TELEMETRY" || return 0
@@ -154,7 +168,17 @@ run_one() { # task run
   start=$(date +%s)
   LAST_START=$start
   # shellcheck disable=SC2086 # launch_env is a list of VAR=value words
-  env $launch_env timeout "$TIMEOUT" opencode run --format json ${AGENT:+--agent "$AGENT"} "$prompt" > "$log" 2>&1 < /dev/null
+  env $launch_env timeout "$TIMEOUT" opencode run --format json ${AGENT:+--agent "$AGENT"} "$prompt" > "$log" 2>&1 < /dev/null &
+  local pid=$! stop="" tick=0
+  # Poll every second so the measured time stays exact; check the STOP_* limits every 10 s.
+  while kill -0 "$pid" 2> /dev/null; do
+    if [ $((tick++ % 10)) -eq 9 ]; then
+      stop=$(guard_breach "$start")
+      [ -n "$stop" ] && { kill "$pid"; break; } # timeout passes the signal on to opencode
+    fi
+    sleep 1
+  done
+  wait "$pid"
   code=$?
   secs=$(( $(date +%s) - start ))
   local ps_line processor context
@@ -186,6 +210,10 @@ run_one() { # task run
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$task" "$run" "$pass" "$secs" "$code" "$tools" "$tool_errors" \
     "$edited" "$claimed" "$false_claim" "${processor:-?}" "${context:-?}" "$start" >> "$OUT"
   tail -1 "$OUT"
+  if [ -n "$stop" ]; then
+    echo "$(date +%T) guard stop during $task run $run: $stop" | tee -a "$BENCH_DIR/guardrails.log" >&2
+    exit 1
+  fi
   cd - >/dev/null || return 1
 }
 
