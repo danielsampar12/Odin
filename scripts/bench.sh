@@ -146,6 +146,10 @@ run_one() { # task run
   [ -n "$launch_env" ] || { echo "bench: could not read the launch command from odin opencode status" >&2; exit 1; }
 
   cool_down "${LAST_START:-$BENCH_START}"
+  # Load the model before the clock starts: a 23 GB model takes a minute to load, which is not agent time.
+  local host=${OLLAMA_HOST:-127.0.0.1:11434}
+  case $host in http*) ;; *) host=http://$host ;; esac
+  curl -sf "$host/api/generate" -d "{\"model\": \"$model\"}" > /dev/null || echo "bench: could not preload $model" >&2
   local start code secs
   start=$(date +%s)
   LAST_START=$start
