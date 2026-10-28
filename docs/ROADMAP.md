@@ -18,12 +18,12 @@ Updated 2026-10-28.
 - `odin opencode generate` exits non-zero when it refuses to overwrite a file.
 - First-run smoke test (`scripts/smoke-test.sh`): the full CLI flow in an empty HOME without Ollama or OpenCode.
 - CI (GitHub Actions): gofmt, `go vet`, `go test` and the smoke test on every push and pull request.
-- `main`'s v1 temperature fix is ported into `legacy/setup.sh`.
+- `v2` merged into `main` (PR #4); `main`'s v1 temperature fix is ported into `legacy/setup.sh`, and legacy is frozen.
+- Release workflow: pushing a `v*` tag builds Linux and macOS binaries (amd64, arm64) with checksums and publishes a GitHub release.
 
 ## Stage 1: reliable foundation (in progress)
 
-- [ ] Merge `v2` into `main` and freeze legacy.
-- [ ] Tag `v0.2.0` and publish release binaries with GoReleaser.
+- [ ] Tag `v0.2.0` to publish the first release.
 
 ## Stage 2: repeatable project workflow
 
