@@ -150,9 +150,7 @@ func (s ProjectScaffold) RenderJSONC(options GenerateOptions) (string, error) {
 		},
 		"model": s.ProviderModel(options.Context),
 		// OpenCode resolves instruction paths from the project root, not from this file.
-		"instructions": []string{".odin/rules.md"},
-		// Language servers report compile errors back to the agent after each edit (OpenCode 1.19 has LSP off by default).
-		"lsp":           true,
+		"instructions":  []string{".odin/rules.md"},
 		"default_agent": s.Companion,
 		"agent":         agents(sampling),
 	}
