@@ -9,7 +9,7 @@ Updated 2026-10-28.
 - Go CLI with `doctor`, `setup`, `init`, `start`, `model list/recommend/pull`, `opencode status/generate` and `memory status/doctor`.
 - **Stage 0, core loop proven** on an RTX 5070 (12 GB): `qwen3.5:9b-q4_K_M` at a 16k–32k context completed the OpenCode test task in 2 of 3 runs. qwen2.5-coder emitted tool calls as plain text (0 of 6), and Ollama's default 4096-token context truncated OpenCode's ~10k-token prompt. Equally tuned, llama.cpp was within ~4% of Ollama, so Odin keeps Ollama.
 - Catalog-based model recommendations that fit models to memory at the needed context ([MODEL_CATALOG.md](MODEL_CATALOG.md)).
-- OpenCode runs at a 16k or 32k context through a derived Ollama model; `.odin/rules.md` is loaded; `~/.claude/CLAUDE.md` no longer leaks into sessions.
+- OpenCode runs at a 16k, 32k or 64k context through a derived Ollama model; `.odin/rules.md` is loaded; `~/.claude/CLAUDE.md` no longer leaks into sessions.
 - `odin start --exec` exits non-zero when it cannot launch.
 - `odin setup` shows the OpenCode install command instead of running it.
 - Memory is off by default; MemPalace is opt-in.
@@ -46,9 +46,17 @@ The plan put Stage 3 after the three-tester milestone; the maintainer chose to b
 - [x] Hephaestus, Freya, Thor and Loki are dropped from Odin v2 until they have agent definitions; a config that names one falls back to Baldur with a warning.
 - [x] `roles/baldur.md` is rewritten for agent work, because an agent prompt replaces OpenCode's built-in prompt. Odin v1 (`legacy/`) reads the same file.
 
+## Benchmark and tuning (done)
+
+- [x] `scripts/bench.sh`: medium Exercism Go exercises, 4 dev and 8 held-out, each in a fresh repo through `odin init`, `odin opencode generate` and one `opencode run`, with telemetry guardrails (`scripts/telemetry.sh`), code-quality checks (`scripts/bench-quality.sh`) and the Tyr no-changes check (`scripts/tyr-check.sh`).
+- [x] Held-out pass@1 for qwen3.5:9b went from 17% (v0.2.0, 32k) to 62.5% on a rerun of the final build (67% when picked), at a median under 4 minutes: Baldur at 64k, Qwen's coding sampling, thinking off (with a `think` variant to turn it back on). Every iteration is in [MODEL_CATALOG.md](MODEL_CATALOG.md).
+
 ## Open risks
 
-- Qwen3.5/3.6 think by default, and OpenCode 1.19 offers no way to turn it off for Qwen models.
+- Thinking off is the 9b default; the `think` variant is unbenchmarked, and one held-out run claimed passing tests that hung.
+- An agent's own runaway `go test` can drain host RAM (seen once: 0.7 GiB free, 15 GiB of swap); OpenCode puts no memory limit on shell commands.
+- The benchmark's dev set barely separates configurations, and the shipped config was the best of several held-out results, so its score is optimistic.
+- qwen3.6:35b-a3b solved every dev task on a 12 GB GPU but spilled to RAM and grew swap by 6 GiB next to a desktop on 32 GB. The CPU-only pick for 32 GB machines, qwen3.5:35b-a3b, is the same size and may swap the same way (unmeasured).
 - OpenCode 1.x only gets triage upstream now; check compatibility with OpenCode 2.x.
 - Model picks for 24 GB GPUs, Apple Silicon and CPU-only machines are unmeasured.
 - macOS is untested.

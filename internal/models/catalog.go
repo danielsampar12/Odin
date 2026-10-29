@@ -83,9 +83,9 @@ var Catalog = []Model{
 		Tag: "qwen3.5:9b-q4_K_M", ParamsB: 9, ActiveParamsB: 9, WeightsGB: 6.55, KVBytesPerToken: 32768,
 		License: "Apache-2.0", ToolCalls: ToolCallsVerified,
 		// Qwen's "precise coding" sampling from the Qwen3.5 model card [V] (Ollama ships temperature 1.0 and
-		// presence_penalty 1.5), with thinking off: Odin's benchmark scored it higher and twice as fast [M].
+		// presence_penalty 1.5), with thinking off: Odin's benchmark scored it at least as high and faster [M].
 		Sampling: &Sampling{Temperature: 0.6, TopP: 0.95, TopK: 20, NoThinking: true},
-		Evidence: "Measured by Odin [M]: passed 16 of 24 held-out Exercism Go runs through Baldur (median 2 min) and the Stage 0 task, 100% GPU at 64k on 12 GB; Terminal-Bench 2.1 29.2 [T, Artificial Analysis].",
+		Evidence: "Measured by Odin [M]: passed 15 of 24 held-out Exercism Go runs through Baldur on a rerun (16 when picked; median under 4 min) and the Stage 0 task, 100% GPU at 64k on 12 GB; Terminal-Bench 2.1 29.2 [T, Artificial Analysis].",
 	},
 	{
 		Tag: "qwen3.5:4b-q4_K_M", ParamsB: 4, ActiveParamsB: 4, WeightsGB: 3.32, KVBytesPerToken: 32768,

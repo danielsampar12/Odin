@@ -124,7 +124,7 @@ odin start --exec                    # validate everything, then launch OpenCode
 | `AGENTS.md` | `odin init --agents-md` | Only with the flag, and only when the repository has none |
 | `.odin/generated/opencode.jsonc` | `odin opencode generate` | Machine-specific: keep it out of version control (Odin prints the `.gitignore` line but never edits `.gitignore`). Its header holds a hash, so Odin can tell a stale file from a hand-edited one |
 | Ollama models | `odin setup`, `odin model pull` | The model weights (several GB each) |
-| Ollama models named `<model>-ctx16k` or `<model>-ctx32k` | `odin start --exec` | The same weights with a larger context; takes almost no extra disk |
+| Ollama models named `<model>-ctx16k`, `-ctx32k` or `-ctx64k` | `odin start --exec` | The same weights with a larger context and Odin's sampling settings; takes almost no extra disk |
 
 Odin does not edit your shell startup files, your `.gitignore`, your global OpenCode config, or Ollama's server settings. When it launches OpenCode, it sets `OPENCODE_DISABLE_CLAUDE_CODE=1` and `OPENCODE_DISABLE_EXTERNAL_SKILLS=1`, so your global `~/.claude/CLAUDE.md` and the skills in `~/.claude/skills` and `~/.agents/skills` do not leak into the project; skills in the project's `.opencode/skills/` still load.
 
@@ -134,7 +134,9 @@ Put your own project-level OpenCode settings (permissions, extra instructions) i
 
 ## Models
 
-OpenCode's prompt is about 10k tokens before you type anything, and Ollama's default context (4096 tokens on most GPUs) cuts it off. So `odin model recommend` picks the best model that fits your memory with at least 16k tokens of context, and Odin runs it at that size.
+OpenCode's prompt is about 10k tokens before you type anything, and Ollama's default context (4096 tokens on most GPUs) cuts it off. So `odin model recommend` picks the best model that fits your memory with at least 16k tokens of context, and Odin runs it at the largest of 64k, 32k or 16k that fits: long tasks outgrow 32k, and a small model often loses the thread when OpenCode compacts the session.
+
+For `qwen3.5:9b-q4_K_M`, Odin also sets Qwen's recommended coding sampling and turns the model's thinking off, which was faster and at least as accurate in Odin's benchmark. To turn thinking back on for a hard problem, press ctrl+t in OpenCode to switch to the `think` variant, or run `opencode run --variant think`.
 
 | Machine | Recommended for agent use |
 |---|---|
@@ -144,7 +146,7 @@ OpenCode's prompt is about 10k tokens before you type anything, and Ollama's def
 | NVIDIA 12–16 GB, Apple Silicon 16–24 GB | `qwen3.5:9b-q4_K_M` |
 | NVIDIA 24 GB, Apple Silicon 32 GB and up | `qwen3.6:27b-q4_K_M` |
 
-Only `qwen3.5:9b-q4_K_M` has been measured end to end with OpenCode so far; the other picks rest on published benchmarks. Method, measurements and sources: [docs/MODEL_CATALOG.md](docs/MODEL_CATALOG.md).
+Only `qwen3.5:9b-q4_K_M` has been measured end to end with OpenCode so far: through Odin's Baldur agent it passed 15 of 24 runs on held-out medium Exercism Go exercises in a rerun of the final build (16 of 24 when the settings were picked), at a median of under 4 minutes a task, on a 12 GB RTX 5070. The other picks rest on published benchmarks. Method, measurements and sources: [docs/MODEL_CATALOG.md](docs/MODEL_CATALOG.md).
 
 ## Memory
 
@@ -168,7 +170,7 @@ rm "$(go env GOPATH)/bin/odin"
 rm -rf ~/.odin
 ```
 
-In each project, delete `.odin/`, and `AGENTS.md` if Odin created it. `ollama list` shows the `-ctx16k`/`-ctx32k` models Odin created; remove them with `ollama rm <name>`. Ollama, OpenCode and your models are yours to keep or uninstall.
+In each project, delete `.odin/`, and `AGENTS.md` if Odin created it. `ollama list` shows the `-ctx16k`/`-ctx32k`/`-ctx64k` models Odin created; remove them with `ollama rm <name>`. Ollama, OpenCode and your models are yours to keep or uninstall.
 
 ## Odin v1
 
