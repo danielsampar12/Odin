@@ -48,7 +48,8 @@ before compaction (F7 below).
 
 A `think` variant turns thinking back on, with `max_tokens` back at a quarter of the context
 (OpenCode 1.19 passes an unknown variant option into the request body): `opencode run --variant
-think`, or ctrl+t in the OpenCode TUI. Its quality has not been benchmarked.
+think`, or ctrl+t in the OpenCode TUI. At 64k a think turn in the last 8k tokens before compaction can
+run past the context. Its quality has not been benchmarked.
 
 ## Catalog (verified 2026-10-28)
 

@@ -1,6 +1,6 @@
 # Odin v2 Roadmap
 
-Updated 2026-10-28.
+Updated 2026-10-29.
 
 **Next milestone (still open): Odin works for someone who isn't its creator.** Three people on fresh machines (at least one macOS and one Linux) reach a successful, tool-using OpenCode edit through `odin start --exec`, using only the README, within 45 minutes and without help.
 

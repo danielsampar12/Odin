@@ -14,7 +14,7 @@
 #        TELEMETRY=      CSV written by scripts/telemetry.sh; enables the thermal pause and the guardrail report
 #        STOP_MIN_AVAIL_MIB=  with TELEMETRY: stop the benchmark mid-run if available RAM drops below this
 #        STOP_ON_THERMAL=1    with TELEMETRY: stop instead of pausing at 83 C GPU, 90 C CPU or a slowdown flag
-#                             (either one also stops on a kernel OOM kill or an NVIDIA GPU fault)
+#                             (either one also stops on a kernel OOM kill; an NVIDIA GPU fault always stops)
 # Needs odin, opencode, ollama, go, git, jq and curl on PATH, a running Ollama with the configured model,
 # and `odin start --exec` run once on this machine (and again after upgrading odin) so the context model
 # exists with the current parameters.
@@ -64,8 +64,11 @@ trap '[ -n "${RUN_PID:-}" ] && kill "$RUN_PID" 2> /dev/null; exit 130' INT TERM
 # Telemetry rows can be half-written or hold "?" where a sensor gave nothing; only numbers count.
 HOT='NF == 11 && (($2 ~ /^[0-9.]+$/ && $2 >= 83) || $6 == "Active" || $7 == "Active" || ($8 ~ /^[0-9.]+$/ && $8 >= 90))'
 
-# Prints why the benchmark must stop now, if a STOP_* limit is set and was crossed since $1.
+# Prints why the benchmark must stop now: a GPU fault, or a STOP_* limit that was crossed since $1.
 guard_breach() {
+  # A crashed GPU makes Ollama fall back to CPU, so every later run would time out and score as a failure.
+  journalctl -k --since "@$BENCH_START" --no-pager 2>/dev/null | grep -qE 'NVRM: .*(recovery action changed .* to 0x[124]|fallen off the bus)' &&
+    echo "GPU fault in the kernel log (NVIDIA Xid)" && return 0
   [ -n "${TELEMETRY:-}" ] && [ -f "$TELEMETRY" ] || return 0
   [ -n "${STOP_MIN_AVAIL_MIB:-}${STOP_ON_THERMAL:-}" ] || return 0
   awk -F, -v since="$1" -v min="${STOP_MIN_AVAIL_MIB:-0}" -v thermal="${STOP_ON_THERMAL:-}" 'NR > 1 && $1 >= since {
@@ -73,9 +76,6 @@ guard_breach() {
     if (thermal && '"$HOT"') { print "thermal limit: GPU " $2 " C, CPU " $8 " C"; exit }
   }' "$TELEMETRY"
   journalctl -k --since "@$BENCH_START" --no-pager 2>/dev/null | grep -qiE 'out of memory|oom-kill' && echo "kernel OOM kill"
-  # A crashed GPU makes Ollama fall back to CPU, so every later run would time out and score as a failure.
-  journalctl -k --since "@$BENCH_START" --no-pager 2>/dev/null | grep -qE 'NVRM: .*(recovery action changed .* to 0x[12]|fallen off the bus)' &&
-    echo "GPU fault in the kernel log (NVIDIA Xid)"
 }
 
 # Pauses before a run when the previous one got the GPU to 83 C, set a thermal-slowdown flag or got the
