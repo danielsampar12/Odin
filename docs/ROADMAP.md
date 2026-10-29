@@ -49,14 +49,15 @@ The plan put Stage 3 after the three-tester milestone; the maintainer chose to b
 ## Benchmark and tuning (done)
 
 - [x] `scripts/bench.sh`: medium Exercism Go exercises, 4 dev and 8 held-out, each in a fresh repo through `odin init`, `odin opencode generate` and one `opencode run`, with telemetry guardrails (`scripts/telemetry.sh`), code-quality checks (`scripts/bench-quality.sh`) and the Tyr no-changes check (`scripts/tyr-check.sh`).
-- [x] Held-out pass@1 for qwen3.5:9b went from 17% (v0.2.0, 32k) to 62.5% on a rerun of the final build (67% when picked), at a median under 4 minutes: Baldur at 64k, Qwen's coding sampling, thinking off (with a `think` variant to turn it back on). Every iteration is in [MODEL_CATALOG.md](MODEL_CATALOG.md).
+- [x] Held-out pass@1 for qwen3.5:9b went from 17% (v0.2.0, 32k) to 71% and then 62.5% on a rerun, at a median under 2 minutes: Baldur at 64k, Qwen's coding sampling, thinking off (with a `think` variant to turn it back on) and a smaller output limit. Every iteration is in [MODEL_CATALOG.md](MODEL_CATALOG.md).
 
 ## Open risks
 
 - Thinking off is the 9b default; the `think` variant is unbenchmarked, and one held-out run claimed passing tests that hung.
 - An agent's own runaway `go test` can drain host RAM (seen once: 0.7 GiB free, 15 GiB of swap); OpenCode puts no memory limit on shell commands.
-- The benchmark's dev set barely separates configurations, and the shipped config was the best of several held-out results, so its score is optimistic.
+- The benchmark's dev set barely separates configurations, and the shipped config was the best of several held-out results, so its score is optimistic: F2 and F7 both reran at 15/24, and F7's edge over F2 is speed, not score. F7's rounds ran on a newer kernel than the rest.
 - qwen3.6:35b-a3b solved every dev task on a 12 GB GPU but spilled to RAM and grew swap by 6 GiB next to a desktop on 32 GB. The CPU-only pick for 32 GB machines, qwen3.5:35b-a3b, is the same size and may swap the same way (unmeasured).
+- The GPU driver (595.99.02) crashed once during the benchmark (Xid 62) and needed a reboot; until then Ollama silently ran the model on CPU.
 - OpenCode 1.x only gets triage upstream now; check compatibility with OpenCode 2.x.
 - Model picks for 24 GB GPUs, Apple Silicon and CPU-only machines are unmeasured.
 - macOS is untested.

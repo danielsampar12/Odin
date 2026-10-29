@@ -146,7 +146,7 @@ For `qwen3.5:9b-q4_K_M`, Odin also sets Qwen's recommended coding sampling and t
 | NVIDIA 12–16 GB, Apple Silicon 16–24 GB | `qwen3.5:9b-q4_K_M` |
 | NVIDIA 24 GB, Apple Silicon 32 GB and up | `qwen3.6:27b-q4_K_M` |
 
-Only `qwen3.5:9b-q4_K_M` has been measured end to end with OpenCode so far: through Odin's Baldur agent it passed 15 of 24 runs on held-out medium Exercism Go exercises in a rerun of the final build (16 of 24 when the settings were picked), at a median of under 4 minutes a task, on a 12 GB RTX 5070. The other picks rest on published benchmarks. Method, measurements and sources: [docs/MODEL_CATALOG.md](docs/MODEL_CATALOG.md).
+Only `qwen3.5:9b-q4_K_M` has been measured end to end with OpenCode so far: through Odin's Baldur agent it passed 17 and then 15 of 24 runs in two rounds of held-out medium Exercism Go exercises, at a median of under 2 minutes a task, on a 12 GB RTX 5070. The other picks rest on published benchmarks. Method, measurements and sources: [docs/MODEL_CATALOG.md](docs/MODEL_CATALOG.md).
 
 ## Memory
 
