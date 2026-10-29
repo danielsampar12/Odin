@@ -253,10 +253,14 @@ func GeneratedConfigState(cwd string, options GenerateOptions) (ConfigState, err
 }
 
 func modelEntry(name string, numCtx int, sampling *models.Sampling) map[string]any {
+	output := numCtx / 4
+	if sampling != nil && sampling.NoThinking {
+		output = min(output, 8192) // without thinking a turn's output stays far below this; the rest is usable context
+	}
 	entry := map[string]any{
 		"name": name,
-		// Lets OpenCode compact the session before it outgrows num_ctx.
-		"limit": map[string]int{"context": numCtx, "output": numCtx / 4},
+		// Lets OpenCode compact the session before it outgrows num_ctx. OpenCode also sends output as max_tokens.
+		"limit": map[string]int{"context": numCtx, "output": output},
 	}
 	if sampling != nil {
 		entry["temperature"] = true // without it OpenCode never sends an agent's temperature to this model

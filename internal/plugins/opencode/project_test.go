@@ -322,4 +322,10 @@ func TestModelEntrySampling(t *testing.T) {
 	if entry["variants"].(map[string]any)["think"].(map[string]any)["reasoningEffort"] != "high" {
 		t.Fatalf("the think variant should turn thinking back on: %v", entry)
 	}
+	if limit := entry["limit"].(map[string]int); limit["output"] != 8192 {
+		t.Fatalf("thinking off should reserve 8192 output tokens at 64k: %v", limit)
+	}
+	if limit := modelEntry("m", 16384, &models.Sampling{NoThinking: true})["limit"].(map[string]int); limit["output"] != 4096 {
+		t.Fatalf("a small context should keep a quarter for output: %v", limit)
+	}
 }
