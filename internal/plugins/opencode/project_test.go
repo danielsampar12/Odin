@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/danielsampar12/odin/internal/config"
+	"github.com/danielsampar12/odin/internal/models"
 )
 
 func TestWriteGeneratedConfig(t *testing.T) {
@@ -303,5 +304,22 @@ func TestGeneratedConfigHasCompanionAgents(t *testing.T) {
 	}
 	if scaffold.Companion != "baldur" || len(scaffold.Warnings) != 1 {
 		t.Fatalf("a v1 companion should fall back to baldur with a warning: %q, %q", scaffold.Companion, scaffold.Warnings)
+	}
+}
+
+func TestModelEntrySampling(t *testing.T) {
+	plain := modelEntry("m", 32768, nil)
+	if plain["temperature"] != nil || plain["options"] != nil || plain["variants"] != nil {
+		t.Fatalf("a model without catalog sampling should keep Ollama's settings: %v", plain)
+	}
+	entry := modelEntry("m", 65536, &models.Sampling{Temperature: 0.6, NoThinking: true})
+	if entry["temperature"] != true {
+		t.Fatalf("OpenCode only sends the agent's temperature when the model allows it: %v", entry)
+	}
+	if entry["options"].(map[string]any)["reasoningEffort"] != "none" {
+		t.Fatalf("thinking should be off by default: %v", entry)
+	}
+	if entry["variants"].(map[string]any)["think"].(map[string]any)["reasoningEffort"] != "high" {
+		t.Fatalf("the think variant should turn thinking back on: %v", entry)
 	}
 }

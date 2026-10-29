@@ -35,10 +35,6 @@ type Sampling struct {
 	NoThinking      bool // turn the model's thinking off through OpenCode (reasoningEffort "none")
 }
 
-// qwenCoding is Qwen's "thinking mode, precise coding" setting from the Qwen3.5 model cards [V]. Ollama's
-// qwen3.5 models ship the general thinking setting instead (temperature 1.0, presence_penalty 1.5).
-var qwenCoding = &Sampling{Temperature: 0.6, TopP: 0.95, TopK: 20, PresencePenalty: 0}
-
 // OllamaParameters are the Modelfile parameters for a derived model; a nil Sampling has none.
 func (s *Sampling) OllamaParameters() map[string]any {
 	if s == nil {
@@ -85,8 +81,11 @@ var Catalog = []Model{
 	},
 	{
 		Tag: "qwen3.5:9b-q4_K_M", ParamsB: 9, ActiveParamsB: 9, WeightsGB: 6.55, KVBytesPerToken: 32768,
-		License: "Apache-2.0", ToolCalls: ToolCallsVerified, Sampling: &Sampling{Temperature: 0.6, TopP: 0.95, TopK: 20, NoThinking: true},
-		Evidence: "Measured by Odin [M]: completed the Stage 0 OpenCode task in 2 of 3 runs, 100% GPU at 32k on 12 GB (7.6 GiB); Terminal-Bench 2.1 29.2 [T, Artificial Analysis].",
+		License: "Apache-2.0", ToolCalls: ToolCallsVerified,
+		// Qwen's "precise coding" sampling from the Qwen3.5 model card [V] (Ollama ships temperature 1.0 and
+		// presence_penalty 1.5), with thinking off: Odin's benchmark scored it higher and twice as fast [M].
+		Sampling: &Sampling{Temperature: 0.6, TopP: 0.95, TopK: 20, NoThinking: true},
+		Evidence: "Measured by Odin [M]: passed 16 of 24 held-out Exercism Go runs through Baldur (median 2 min) and the Stage 0 task, 100% GPU at 64k on 12 GB; Terminal-Bench 2.1 29.2 [T, Artificial Analysis].",
 	},
 	{
 		Tag: "qwen3.5:4b-q4_K_M", ParamsB: 4, ActiveParamsB: 4, WeightsGB: 3.32, KVBytesPerToken: 32768,
