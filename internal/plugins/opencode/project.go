@@ -268,7 +268,8 @@ func modelEntry(name string, numCtx int, sampling *models.Sampling) map[string]a
 	if sampling != nil && sampling.NoThinking {
 		entry["options"] = map[string]any{"reasoningEffort": "none"} // Ollama maps reasoning_effort "none" to think=false
 		// `opencode run --variant think` (or the TUI's variant key) turns thinking back on for harder problems.
-		entry["variants"] = map[string]any{"think": map[string]any{"reasoningEffort": "high"}}
+		// OpenCode sends limit.output as max_tokens, too little for thinking; an unknown option goes into the request body.
+		entry["variants"] = map[string]any{"think": map[string]any{"reasoningEffort": "high", "max_tokens": numCtx / 4}}
 	}
 	return entry
 }
