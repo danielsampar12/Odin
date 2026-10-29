@@ -25,8 +25,8 @@ type Model struct {
 }
 
 // Sampling is a vendor's recommended sampling for agentic coding. Ollama's OpenAI-compatible endpoint
-// resets temperature and top_p to 1.0 unless the request sets them, so Odin has OpenCode send those two
-// and bakes top_k and presence_penalty into the derived context model.
+// resets temperature and top_p to 1.0 unless the request sets them and ignores top_k, so Odin bakes all
+// four into the derived context model and has OpenCode send temperature and top_p as well.
 type Sampling struct {
 	Temperature     float64
 	TopP            float64

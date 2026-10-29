@@ -16,7 +16,7 @@ tail -n +2 "$dir/results.tsv" | while IFS=$'\t' read -r task run pass _; do
     vet=no gofmt_ok=no
     go vet ./... > /dev/null 2>&1 && vet=yes
     # Agent-written Go outside the tests: changed tracked files plus new files.
-    files=$( { git diff --name-only HEAD -- '*.go'; git ls-files -o --exclude-standard -- '*.go'; } | grep -v '_test\.go$' | sort -u)
+    files=$( { git diff --name-only --diff-filter=d HEAD -- '*.go'; git ls-files -o --exclude-standard -- '*.go'; } | grep -v '_test\.go$' | sort -u)
     # gofmt exits non-zero on a file that does not parse, which counts as unformatted.
     if [ -z "$files" ] || { unformatted=$(echo "$files" | xargs gofmt -l 2> /dev/null) && [ -z "$unformatted" ]; }; then
       gofmt_ok=yes
