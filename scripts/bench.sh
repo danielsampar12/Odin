@@ -14,7 +14,7 @@
 #        TELEMETRY=      CSV written by scripts/telemetry.sh; enables the thermal pause and the guardrail report
 #        STOP_MIN_AVAIL_MIB=  with TELEMETRY: stop the benchmark mid-run if available RAM drops below this
 #        STOP_ON_THERMAL=1    with TELEMETRY: stop instead of pausing at 83 C GPU, 90 C CPU or a slowdown flag
-#                             (either one also stops on a kernel OOM kill)
+#                             (either one also stops on a kernel OOM kill or an NVIDIA GPU fault)
 # Needs odin, opencode, ollama, go, git, jq and curl on PATH, a running Ollama with the configured model,
 # and `odin start --exec` run once on this machine (and again after upgrading odin) so the context model
 # exists with the current parameters.
@@ -73,6 +73,9 @@ guard_breach() {
     if (thermal && '"$HOT"') { print "thermal limit: GPU " $2 " C, CPU " $8 " C"; exit }
   }' "$TELEMETRY"
   journalctl -k --since "@$BENCH_START" --no-pager 2>/dev/null | grep -qiE 'out of memory|oom-kill' && echo "kernel OOM kill"
+  # A crashed GPU makes Ollama fall back to CPU, so every later run would time out and score as a failure.
+  journalctl -k --since "@$BENCH_START" --no-pager 2>/dev/null | grep -qE 'NVRM: .*(recovery action changed .* to 0x[12]|fallen off the bus)' &&
+    echo "GPU fault in the kernel log (NVIDIA Xid)"
 }
 
 # Pauses before a run when the previous one got the GPU to 83 C, set a thermal-slowdown flag or got the
