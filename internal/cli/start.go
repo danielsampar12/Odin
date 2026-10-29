@@ -10,6 +10,7 @@ import (
 	"github.com/danielsampar12/odin/internal/companions"
 	"github.com/danielsampar12/odin/internal/doctor"
 	"github.com/danielsampar12/odin/internal/models"
+	mempalaceplugin "github.com/danielsampar12/odin/internal/plugins/mempalace"
 	ollamaplugin "github.com/danielsampar12/odin/internal/plugins/ollama"
 	opencodeplugin "github.com/danielsampar12/odin/internal/plugins/opencode"
 	"github.com/spf13/cobra"
@@ -47,6 +48,8 @@ func newStartCmd() *cobra.Command {
 			out := cmd.OutOrStdout()
 			fmt.Fprintln(out, "Odin start")
 			fmt.Fprintln(out)
+			printWarnings(out, scaffold.Warnings)
+			printModelOverrides(out, opencodeplugin.Sources(cwd))
 			fmt.Fprintln(out, "Planned actions:")
 			fmt.Fprintf(out, "- Load global config: %s\n", fileStatusLabel(result.GlobalConfig.Path, result.GlobalConfig.Exists))
 			fmt.Fprintf(out, "- Load project config: %s\n", fileStatusLabel(result.ProjectConfig.Path, result.ProjectConfig.Exists))
@@ -102,17 +105,35 @@ func newStartCmd() *cobra.Command {
 				return fmt.Errorf("cannot launch OpenCode: fix the issues listed above")
 			}
 
-			if providerModel := scaffold.ProviderModel(numCtx); !opencodeplugin.GeneratedConfigUses(cwd, providerModel) {
-				return fmt.Errorf("generated OpenCode config does not use %s; re-run `odin opencode generate`", providerModel)
+			memoryStatus, err := mempalaceplugin.ResolveProjectStatus(cwd)
+			if err != nil {
+				return err
 			}
+			state, err := opencodeplugin.GeneratedConfigState(cwd, opencodeplugin.GenerateOptions{Context: numCtx, WithMemory: memoryStatus.OpenCodeMCPConfigured})
+			if err != nil {
+				return err
+			}
+			providerModel := scaffold.ProviderModel(numCtx)
+			switch {
+			case state == opencodeplugin.ConfigEdited && opencodeplugin.GeneratedConfigUses(cwd, providerModel):
+				fmt.Fprintf(out, "Warning: %s was edited by hand; launching it as it is.\n", displayPath(scaffold.ConfigPath))
+			case state == opencodeplugin.ConfigEdited:
+				return fmt.Errorf("%s was edited by hand and no longer uses %s; fix it or re-run `odin opencode generate --force`", displayPath(scaffold.ConfigPath), providerModel)
+			case state != opencodeplugin.ConfigUpToDate:
+				return fmt.Errorf("cannot launch OpenCode: %s", configStateHint(state))
+			}
+			if !ollamaModelInstalled(result.Ollama.Models, scaffold.Model) {
+				return fmt.Errorf("model %q is not installed; pull it with `odin model pull %s`", scaffold.Model, scaffold.Model)
+			}
+			// Recreated on every launch so its parameters follow the catalog; no weights are copied.
+			verb := "Updating"
 			if !ollamaModelInstalled(result.Ollama.Models, contextModel) {
-				if !ollamaModelInstalled(result.Ollama.Models, scaffold.Model) {
-					return fmt.Errorf("model %q is not installed; pull it with `odin model pull %s`", scaffold.Model, scaffold.Model)
-				}
-				fmt.Fprintf(out, "Creating Ollama model %s (%s with num_ctx %d).\n", contextModel, scaffold.Model, numCtx)
-				if err := ollamaplugin.CreateContextModel(cmd.Context(), result.Ollama.BaseURL, scaffold.Model, numCtx); err != nil {
-					return fmt.Errorf("create Ollama model %s: %w", contextModel, err)
-				}
+				verb = "Creating"
+			}
+			sampling := models.SamplingFor(scaffold.Model)
+			fmt.Fprintf(out, "%s Ollama model %s (%s with num_ctx %d%s).\n", verb, contextModel, scaffold.Model, numCtx, samplingLabel(sampling))
+			if err := ollamaplugin.CreateContextModel(cmd.Context(), result.Ollama.BaseURL, scaffold.Model, numCtx, sampling.OllamaParameters()); err != nil {
+				return fmt.Errorf("create Ollama model %s: %w", contextModel, err)
 			}
 
 			fmt.Fprintln(out)
@@ -139,12 +160,20 @@ func printStartSummary(writer io.Writer, cwd string, scaffold opencodeplugin.Pro
 	fmt.Fprintln(writer)
 	fmt.Fprintf(writer, "Project: %s\n", projectName)
 	fmt.Fprintf(writer, "Companion: %s\n", companions.DisplayName(scaffold.Companion))
+	fmt.Fprintf(writer, "OpenCode agents: %s\n", agentSummary(scaffold.Companion))
 	fmt.Fprintf(writer, "Model: %s\n", scaffold.Model)
 	fmt.Fprintf(writer, "Runtime: %s\n", displayRuntimeName(scaffold.RuntimeProvider))
 	fmt.Fprintf(writer, "OpenCode config: %s\n", displayPath(scaffold.ConfigPath))
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Launching:")
 	fmt.Fprintf(writer, "%s\n", opencodeplugin.LaunchCommand(binaryPath))
+}
+
+func samplingLabel(sampling *models.Sampling) string {
+	if sampling == nil {
+		return ""
+	}
+	return fmt.Sprintf(", temperature %g, top_p %g, top_k %d, presence_penalty %g", sampling.Temperature, sampling.TopP, sampling.TopK, sampling.PresencePenalty)
 }
 
 func ollamaModelInstalled(models []ollamaplugin.Model, name string) bool {

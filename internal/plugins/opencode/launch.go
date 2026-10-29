@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 type LaunchOptions struct {
@@ -22,16 +23,17 @@ func RelativeConfigPath() string {
 	return filepath.Join(".odin", "generated", "opencode.jsonc")
 }
 
-// disableClaudeCode stops OpenCode from also loading ~/.claude/CLAUDE.md and other Claude Code files,
-// which otherwise leak user-global instructions into every Odin session.
-const disableClaudeCode = "OPENCODE_DISABLE_CLAUDE_CODE=1"
+// launchEnv keeps user-global instructions out of every Odin session: the first stops OpenCode from
+// loading ~/.claude/CLAUDE.md and other Claude Code files, the second from listing every skill under
+// ~/.claude/skills and ~/.agents/skills in the system prompt. Project skills in .opencode/skills still load.
+var launchEnv = []string{"OPENCODE_DISABLE_CLAUDE_CODE=1", "OPENCODE_DISABLE_EXTERNAL_SKILLS=1"}
 
 func LaunchCommand(binaryPath string) string {
 	name := "opencode"
 	if binaryPath != "" {
 		name = binaryPath
 	}
-	return "OPENCODE_CONFIG=" + RelativeConfigPath() + " " + disableClaudeCode + " " + name + " ."
+	return "OPENCODE_CONFIG=" + RelativeConfigPath() + " " + strings.Join(launchEnv, " ") + " " + name + " ."
 }
 
 func Launch(ctx context.Context, options LaunchOptions) error {
@@ -42,7 +44,7 @@ func Launch(ctx context.Context, options LaunchOptions) error {
 func buildLaunchCommand(ctx context.Context, options LaunchOptions) *exec.Cmd {
 	command := exec.CommandContext(ctx, options.BinaryPath, ".")
 	command.Dir = options.WorkingDir
-	command.Env = append(defaultEnv(options.Env), "OPENCODE_CONFIG="+options.ConfigPath, disableClaudeCode)
+	command.Env = append(append(defaultEnv(options.Env), "OPENCODE_CONFIG="+options.ConfigPath), launchEnv...)
 	command.Stdin = valueOrReader(options.Stdin, os.Stdin)
 	command.Stdout = valueOrWriter(options.Stdout, os.Stdout)
 	command.Stderr = valueOrWriter(options.Stderr, os.Stderr)

@@ -141,7 +141,7 @@ func executeStep(ctx context.Context, cwd string, plan Plan, step Step, runner R
 		return executeInstallCommandStep(ctx, step, runner, options, verifyMemPalaceInstall, false)
 	case StepPullModel:
 		return executeModelPullStep(ctx, plan, step, options.Stdout)
-	case StepRegisterCompanions, StepShellIntegration, StepProjectInit:
+	case StepShellIntegration, StepProjectInit:
 		return StepResult{Step: step, Outcome: OutcomeManual, Message: manualMessage(step)}, nil
 	default:
 		return StepResult{Step: step, Outcome: OutcomeManual, Message: manualMessage(step)}, nil
@@ -161,7 +161,7 @@ func executeGlobalConfigStep(plan Plan, step Step) (StepResult, error) {
 	}
 
 	globalConfigPath := config.GlobalConfigPath()
-	created, err := writeFileIfMissing(globalConfigPath, config.DefaultGlobalConfig(config.GlobalSettings{
+	created, err := config.WriteFileIfMissing(globalConfigPath, config.DefaultGlobalConfig(config.GlobalSettings{
 		Profile:          plan.Recommendation.Profile,
 		RuntimeProvider:  "ollama",
 		RuntimeBaseURL:   plan.Recommendation.RuntimeBaseURL,
@@ -351,16 +351,6 @@ func manualMessage(step Step) string {
 		parts = append(parts, step.Notes)
 	}
 	return strings.Join(parts, " ")
-}
-
-func writeFileIfMissing(path, content string, perm os.FileMode) (bool, error) {
-	if _, err := os.Stat(path); err == nil {
-		return false, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return false, err
-	}
-
-	return true, os.WriteFile(path, []byte(content), perm)
 }
 
 func displayPathForSetup(path string) string {

@@ -41,9 +41,15 @@ type palaceConfig struct {
 func ResolveProjectStatus(cwd string) (ProjectStatus, error) {
 	globalConfigPath := config.GlobalConfigPath()
 	projectConfigPath := config.ProjectConfigPath(cwd)
-	globalProvider, _ := config.ReadGlobalMemoryProvider(globalConfigPath)
-	projectProvider, _ := config.ReadProjectMemoryProvider(projectConfigPath)
-	hall, _ := config.ReadProjectMemoryHall(projectConfigPath)
+	global, err := config.Load(globalConfigPath)
+	if err != nil {
+		return ProjectStatus{}, err
+	}
+	project, err := config.Load(projectConfigPath)
+	if err != nil {
+		return ProjectStatus{}, err
+	}
+	globalProvider, projectProvider, hall := global.Memory.Provider, project.Memory.Provider, project.Memory.Hall
 	hallDerived := false
 	if hall == "" {
 		hall = DeriveHall(cwd)

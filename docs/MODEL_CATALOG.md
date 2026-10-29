@@ -7,8 +7,8 @@ comes from. Catalog data lives in `internal/models/catalog.go`; selection logic 
 ## How a recommendation is made
 
 1. **Use case.** `agent` (default) is OpenCode with tool calls. OpenCode's system prompt and tool
-   schemas take ~10.4k tokens before any user input, so agents need at least a 16k context (32k when
-   it fits). `chat` is coding Q&A without tools at an 8k context, and may use models whose tool
+   schemas take ~10.4k tokens before any user input, so agents need at least a 16k context (64k or
+   32k when it fits). `chat` is coding Q&A without tools at an 8k context, and may use models whose tool
    calls are broken.
 2. **Memory budget.** NVIDIA: VRAM minus 1 GiB. Apple Silicon: 65% of unified memory below 36 GB,
    75% from 36 GB (an assumption, not a documented limit). No GPU: 70% of RAM, and only models with at
@@ -24,9 +24,32 @@ comes from. Catalog data lives in `internal/models/catalog.go`; selection logic 
 
 Ollama's default context is 4096 on GPUs under ~24 GiB, which truncates OpenCode's prompt, and
 its OpenAI-compatible endpoint cannot set `num_ctx` per request. So `odin opencode generate` points
-OpenCode at a derived model such as `qwen3.5:9b-q4_K_M-ctx32k` (32k when the model fits, otherwise
-16k) with a matching OpenCode context limit, and `odin start --exec` creates that derived model
-through Ollama's `/api/create` if it is missing.
+OpenCode at a derived model such as `qwen3.5:9b-q4_K_M-ctx64k` (64k or 32k when the model fits,
+otherwise 16k) with a matching OpenCode context limit, and `odin start --exec` creates or updates that
+derived model through Ollama's `/api/create`. A long agent task outgrows 32k: OpenCode then compacts
+the session into a summary, and the 9b model often lost the thread there (round 0 below).
+
+## Sampling and thinking
+
+Ollama's OpenAI-compatible endpoint sets temperature and top_p to 1.0 unless the request sends them,
+and ignores top_k from requests. For a catalog entry with recommended sampling, Odin bakes all four
+values into the derived model and has OpenCode send temperature and top_p (the model entry gets
+`"temperature": true`, without which OpenCode never sends an agent's temperature).
+
+`qwen3.5:9b-q4_K_M` uses Qwen's "precise coding" setting from its model card (temperature 0.6, top_p
+0.95, top_k 20, presence_penalty 0; Ollama ships 1.0 and 1.5) with thinking off: the model entry sets
+`"options": {"reasoningEffort": "none"}`, which Ollama maps to `think=false`. Thinking off passed
+slightly more held-out runs and halved the median time (F1 against F2 below).
+
+OpenCode compacts a session when it reaches the context limit minus the output limit, and sends the
+output limit as `max_tokens`. Odin sets the output limit to a quarter of the context, capped at 8192
+with thinking off, where a turn's output stays far below that: at 64k the agent gets 8k more context
+before compaction (F7 below).
+
+A `think` variant turns thinking back on, with `max_tokens` back at a quarter of the context
+(OpenCode 1.19 passes an unknown variant option into the request body): `opencode run --variant
+think`, or ctrl+t in the OpenCode TUI. At 64k a think turn in the last 8k tokens before compaction can
+run past the context. Its quality has not been benchmarked.
 
 ## Catalog (verified 2026-10-28)
 
@@ -59,8 +82,52 @@ Memory estimates in `needGiB` matched nvidia-smi within 0.35 GiB for five model/
 (`internal/models/memory_test.go`).
 
 Known risks seen in measurement: qwen3.5:9b once produced a malformed XML tool call that Ollama
-answered with HTTP 500 ("qwen3.5 tool call parsing failed"); Qwen3.5/3.6 think by default and
-OpenCode 1.19 exposes no reasoning control for Qwen models.
+answered with HTTP 500 ("qwen3.5 tool call parsing failed").
+
+## Measured by Odin (Exercism benchmark, 2026-10-28 and 29)
+
+Same machine and versions. `scripts/bench.sh` runs medium Exercism Go exercises (difficulty 4-7,
+exercism/go @ 6d9eed09): each run is a fresh repo with the stub, tests and instructions, `odin init`,
+`odin opencode generate`, one `opencode run --agent baldur` (600 s limit), then `go test` against the
+original tests. Dev set (tuning): poker, circular-buffer, save-the-cow, binary-search-tree. Held-out
+set (reporting): robot-simulator, dot-dsl, meetup, tree-building, affine-cipher, paasio,
+simple-linked-list, rectangles. Each change was tuned on dev x2 and reported on held-out x3 with no
+task-specific hints. Reproduce the held-out table with:
+
+```bash
+odin start --exec   # once, so the context model exists with the current parameters; quit OpenCode
+RUNS=3 AGENT=baldur scripts/bench.sh held-out
+```
+
+| Configuration (qwen3.5:9b-q4_K_M unless noted) | Dev | Held-out | Held-out median | Notes |
+|---|---|---|---|---|
+| Round 0: v0.2.0 (OpenCode's default agent, 32k) | 4/12 | 4/24 (17%) | 239 s | Stage 0 task 1/3; most failures follow compaction at ~24k |
+| E: Baldur, 64k | 4/8 | 8/24 (33%) | 386.5 s | 8 timeouts; Stage 0 task 3/3 |
+| F1: + Qwen coding sampling | 4/8 | 15/24 (62.5%) | 270 s | Stage 0 task 3/3 |
+| F2: + thinking off | 6/8 | 16/24 (66.7%) | 121.5 s | 7 timeouts; 1 false "tests pass" claim |
+| F3: qwen3.6:35b-a3b (F2 settings, 59% on CPU) | 8/8 | stopped at 0/4 | – | swap grew 2.2 to 8.4 GiB on dev; held-out stopped at 6 GiB free RAM |
+| F4: qwen3:14b, 16k, flash attention + q8_0 KV | 1/8 | not run | – | repeated identical-string edits; context hit the 12k compaction point |
+| F5: F2 + OpenCode LSP (gopls) | 5/8 | not run | – | diagnostics reached the model; no gain |
+| F6: F2 with Qwen's non-thinking sampling | 6/8 | 16/24 (66.7%) | 179.5 s | slower than F2 |
+| F2 build (+ `think` variant), rerun | – | 15/24 (62.5%) | 214 s | 8 timeouts; Stage 0 task 3/3; Tyr changed no files in 3/3 |
+| **F7: F2 + output limit 8192 (shipped)** | 6/8 | **17/24 (70.8%)** | **102.5 s** | 5 timeouts; run after the stop rule, with the user's approval |
+| **Final build (F7), rerun** | – | **15/24 (62.5%)** | **90 s** | 5 timeouts; Stage 0 task 3/3; Tyr changed no files in 3/3 |
+
+GPU peaked at 80 C and CPU at 66 C; at 64k the 9b model ran 100% on GPU, with GPU memory use (desktop
+included) at most 9.1 GiB of 12.
+go vet passed on 11 to 14 of each round's 15 to 17 passing runs, but only 6 to 8 were gofmt-clean
+(OpenCode's formatter is off by default). The tuning loop stopped after two held-out iterations in a
+row without a 5-point gain (F2, F6). F7 ran afterwards with the user's approval, under a rule fixed
+before its data: ship only if it beats both of F2's rounds, then rerun.
+
+The 9b model failed robot-simulator in every configuration, and the dev set barely separates
+configurations (binary-search-tree and circular-buffer nearly always pass, poker nearly always
+fails). Each shipped result was the best of several held-out results, so it is optimistic: F2 and F7 both
+reran at 15/24. Over both rounds F7 passed 32 of 48 runs and F2's build 31 of 48, so F7's gain is
+speed (median 90-102.5 s against 121.5-214 s), not score. F7 and its rerun ran after a reboot onto a
+newer kernel (7.0.0-42, same NVIDIA driver) with swap empty; every earlier row ran on 7.0.0-38. F7's
+first held-out attempt was void: a GPU driver fault (Xid 62) left Ollama on CPU, and
+`scripts/bench.sh` now stops on one.
 
 ## Sources
 
@@ -90,7 +157,7 @@ Terminal-Bench figures were collected by one of its sub-agents and are marked [T
 
 - Tool calls and task quality for every "reported" entry; only qwen3.5:9b is measured among new picks.
 - CPU-only and MoE speeds, and the Apple Silicon memory share.
-- Thinking on vs off with tools at 32k, and OpenCode 2.x compatibility (OpenCode 1.x is now triage-only).
+- The `think` variant's quality, and OpenCode 2.x compatibility (OpenCode 1.x is now triage-only).
 
 To update an entry, re-read its registry manifest and `config.json`, then rerun
 `go test ./internal/models/`.

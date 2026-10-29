@@ -20,7 +20,37 @@ type Model struct {
 	KVBytesPerToken int     // f16 KV cache per context token: 2 x full-attention layers x kv_heads x head_dim x 2 bytes
 	License         string  // all current entries are open-weight; docs/MODEL_CATALOG.md tracks open-source status
 	ToolCalls       ToolCalls
-	Evidence        string // why it is ranked here: [M] measured by Odin, [V] vendor-reported, [T] third-party
+	Evidence        string    // why it is ranked here: [M] measured by Odin, [V] vendor-reported, [T] third-party
+	Sampling        *Sampling // vendor-recommended sampling for coding; nil keeps Ollama's settings
+}
+
+// Sampling is a vendor's recommended sampling for agentic coding. Ollama's OpenAI-compatible endpoint
+// resets temperature and top_p to 1.0 unless the request sets them and ignores top_k, so Odin bakes all
+// four into the derived context model and has OpenCode send temperature and top_p as well.
+type Sampling struct {
+	Temperature     float64
+	TopP            float64
+	TopK            int
+	PresencePenalty float64
+	NoThinking      bool // turn the model's thinking off through OpenCode (reasoningEffort "none")
+}
+
+// OllamaParameters are the Modelfile parameters for a derived model; a nil Sampling has none.
+func (s *Sampling) OllamaParameters() map[string]any {
+	if s == nil {
+		return nil
+	}
+	return map[string]any{"temperature": s.Temperature, "top_p": s.TopP, "top_k": s.TopK, "presence_penalty": s.PresencePenalty}
+}
+
+// SamplingFor returns the catalog's recommended sampling for tag, or nil.
+func SamplingFor(tag string) *Sampling {
+	for _, m := range Catalog {
+		if m.Tag == tag {
+			return m.Sampling
+		}
+	}
+	return nil
 }
 
 // DefaultAgentModel is used when no model has been configured. It must stay a verified, small entry.
@@ -52,7 +82,10 @@ var Catalog = []Model{
 	{
 		Tag: "qwen3.5:9b-q4_K_M", ParamsB: 9, ActiveParamsB: 9, WeightsGB: 6.55, KVBytesPerToken: 32768,
 		License: "Apache-2.0", ToolCalls: ToolCallsVerified,
-		Evidence: "Measured by Odin [M]: completed the Stage 0 OpenCode task in 2 of 3 runs, 100% GPU at 32k on 12 GB (7.6 GiB); Terminal-Bench 2.1 29.2 [T, Artificial Analysis].",
+		// Qwen's "precise coding" sampling from the Qwen3.5 model card [V] (Ollama ships temperature 1.0 and
+		// presence_penalty 1.5), with thinking off: Odin's benchmark scored it at least as high and faster [M].
+		Sampling: &Sampling{Temperature: 0.6, TopP: 0.95, TopK: 20, NoThinking: true},
+		Evidence: "Measured by Odin [M]: passed 17 and 15 of 24 held-out Exercism Go runs through Baldur in two rounds (median under 2 min) and the Stage 0 task, 100% GPU at 64k on 12 GB; Terminal-Bench 2.1 29.2 [T, Artificial Analysis].",
 	},
 	{
 		Tag: "qwen3.5:4b-q4_K_M", ParamsB: 4, ActiveParamsB: 4, WeightsGB: 3.32, KVBytesPerToken: 32768,

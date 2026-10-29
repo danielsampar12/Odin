@@ -1,36 +1,53 @@
 package companions
 
-import "strings"
+import (
+	"strings"
 
+	"github.com/danielsampar12/odin/roles"
+)
+
+// Companion is an OpenCode agent Odin generates; its prompt is roles/<Key>.md.
 type Companion struct {
 	Key         string
 	Name        string
 	Description string
+	ReadOnly    bool // cannot edit files, run commands or hand work to subagents
 }
 
+// Registry lists the companions in the order `odin companion list` shows them; the first is the default.
 var Registry = []Companion{
-	{Key: "baldur", Name: "Baldur", Description: "Pragmatic pair programmer"},
-	{Key: "tyr", Name: "Tyr", Description: "Architect and reviewer"},
-	{Key: "thor", Name: "Thor", Description: "Fast implementer"},
-	{Key: "loki", Name: "Loki", Description: "Chaos agent"},
-	{Key: "freya", Name: "Freya", Description: "Beginner-friendly teacher"},
-	{Key: "hephaestus", Name: "Hephaestus", Description: "Infra and local setup expert"},
+	{Key: "baldur", Name: "Baldur", Description: "Pair programmer: makes the changes you ask for, runs the tests and explains tradeoffs"},
+	{Key: "tyr", Name: "Tyr", Description: "Reviewer: reads the code and reports problems; cannot edit files or run commands", ReadOnly: true},
 }
 
-func DefaultForProfile(profile string) Companion {
-	if strings.EqualFold(profile, "beginner") {
-		return Companion{Key: "freya", Name: "Freya", Description: "Beginner-friendly teacher"}
-	}
+func Default() Companion {
+	return Registry[0]
+}
 
-	return Companion{Key: "baldur", Name: "Baldur", Description: "Pragmatic pair programmer"}
+// Lookup finds a companion by key. An unknown key, such as a v1 companion that Odin v2 no longer ships,
+// returns the default companion and false.
+func Lookup(key string) (Companion, bool) {
+	for _, companion := range Registry {
+		if strings.EqualFold(companion.Key, key) {
+			return companion, true
+		}
+	}
+	return Default(), false
+}
+
+// Prompt is the companion's system prompt for OpenCode. It replaces OpenCode's built-in prompt for that agent.
+func (c Companion) Prompt() string {
+	body, err := roles.FS.ReadFile(c.Key + ".md")
+	if err != nil {
+		panic("roles/" + c.Key + ".md is not embedded: " + err.Error()) // every Registry entry ships a role file
+	}
+	return string(body)
 }
 
 func DisplayName(key string) string {
-	for _, companion := range Registry {
-		if strings.EqualFold(companion.Key, key) {
-			return companion.Name
-		}
+	companion, ok := Lookup(key)
+	if !ok {
+		return key
 	}
-
-	return key
+	return companion.Name
 }

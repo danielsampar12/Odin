@@ -12,6 +12,7 @@ func NewRootCmd() *cobra.Command {
 
 	cmd.AddCommand(
 		newVersionCmd(),
+		newCompanionCmd(),
 		newDoctorCmd(),
 		newMemoryCmd(),
 		newModelCmd(),
