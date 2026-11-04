@@ -1,6 +1,6 @@
 # Odin v2 Roadmap
 
-Updated 2026-10-29.
+Updated 2026-11-04.
 
 **Next milestone (still open): Odin works for someone who isn't its creator.** Three people on fresh machines (at least one macOS and one Linux) reach a successful, tool-using OpenCode edit through `odin start --exec`, using only the README, within 45 minutes and without help.
 
@@ -21,10 +21,11 @@ Updated 2026-10-29.
 - `v2` merged into `main` (PR #4); `main`'s v1 temperature fix is ported into `legacy/setup.sh`, and legacy is frozen.
 - Release workflow: pushing a `v*` tag builds Linux and macOS binaries (amd64, arm64) with checksums and publishes a GitHub release.
 - **v0.2.0 released** (2026-10-28): https://github.com/danielsampar12/Odin/releases/tag/v0.2.0
+- **v0.3.0 released** (2026-11-04): https://github.com/danielsampar12/Odin/releases/tag/v0.3.0
 
 ## Stage 1: reliable foundation (done)
 
-Next: run the milestone with three testers before starting Stage 3.
+Next: run the milestone with three testers.
 
 ## Stage 2: repeatable project workflow (done)
 
