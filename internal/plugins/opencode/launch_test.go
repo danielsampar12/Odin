@@ -25,7 +25,7 @@ func TestBuildLaunchCommand(t *testing.T) {
 		t.Fatalf("command.Args = %#v, want binary plus '.'", command.Args)
 	}
 
-	for _, want := range []string{"OPENCODE_CONFIG=.odin/generated/opencode.jsonc", "OPENCODE_DISABLE_CLAUDE_CODE=1"} {
+	for _, want := range []string{"OPENCODE_CONFIG=.odin/generated/opencode.jsonc", "OPENCODE_DISABLE_CLAUDE_CODE=1", "OPENCODE_DISABLE_EXTERNAL_SKILLS=1"} {
 		found := false
 		for _, env := range command.Env {
 			found = found || env == want
@@ -36,9 +36,9 @@ func TestBuildLaunchCommand(t *testing.T) {
 	}
 }
 
-func TestLaunchCommandDisablesClaudeCode(t *testing.T) {
+func TestLaunchCommandKeepsGlobalInstructionsOut(t *testing.T) {
 	got := LaunchCommand("")
-	want := "OPENCODE_CONFIG=" + RelativeConfigPath() + " OPENCODE_DISABLE_CLAUDE_CODE=1 opencode ."
+	want := "OPENCODE_CONFIG=" + RelativeConfigPath() + " OPENCODE_DISABLE_CLAUDE_CODE=1 OPENCODE_DISABLE_EXTERNAL_SKILLS=1 opencode ."
 	if got != want {
 		t.Fatalf("LaunchCommand = %q, want %q", got, want)
 	}

@@ -27,16 +27,15 @@ const (
 )
 
 const (
-	StepCheckSystem        StepID = "check_system"
-	StepGlobalConfig       StepID = "global_config"
-	StepInstallOllama      StepID = "install_ollama"
-	StepVerifyOllama       StepID = "verify_ollama"
-	StepInstallOpenCode    StepID = "install_opencode"
-	StepInstallMemPalace   StepID = "install_mempalace"
-	StepPullModel          StepID = "pull_model"
-	StepRegisterCompanions StepID = "register_companions"
-	StepShellIntegration   StepID = "shell_integration"
-	StepProjectInit        StepID = "project_init"
+	StepCheckSystem      StepID = "check_system"
+	StepGlobalConfig     StepID = "global_config"
+	StepInstallOllama    StepID = "install_ollama"
+	StepVerifyOllama     StepID = "verify_ollama"
+	StepInstallOpenCode  StepID = "install_opencode"
+	StepInstallMemPalace StepID = "install_mempalace"
+	StepPullModel        StepID = "pull_model"
+	StepShellIntegration StepID = "shell_integration"
+	StepProjectInit      StepID = "project_init"
 )
 
 type Recommendation struct {
@@ -127,7 +126,7 @@ func Build(ctx context.Context, cwd string) (Plan, error) {
 
 func buildRecommendation(result doctor.Result) Recommendation {
 	profile := detectProfile(result.CurrentDir, result.InGitRepo)
-	companion := companions.DefaultForProfile(profile)
+	companion := companions.Default()
 	modelRecommendation := models.RecommendCodingModel(result.RAMGB, result.GPU)
 	shellProvider, shellEnabled := recommendShellProvider(result)
 
@@ -192,13 +191,6 @@ func buildSteps(result doctor.Result, recommendation Recommendation, ollamaInsta
 		openCodeInstallStep(result, openCodeInstall),
 		memPalaceInstallStep(result, memPalaceInstall),
 		modelPlanStep(result, recommendation),
-		{
-			ID:        StepRegisterCompanions,
-			Name:      "Install/register global companions",
-			Status:    StatusSkipped,
-			Reason:    "Companion registration remains scaffolded in the current Odin v2 implementation.",
-			Automatic: false,
-		},
 		{
 			ID:        StepShellIntegration,
 			Name:      "Shell integration",

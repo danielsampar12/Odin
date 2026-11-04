@@ -42,8 +42,8 @@ func newDoctorCmd() *cobra.Command {
 			if result.GitRoot != "" {
 				fmt.Fprintf(out, "- Git root: %s\n", displayPath(result.GitRoot))
 			}
-			fmt.Fprintf(out, "- Global config: %s\n", fileStatusLabel(result.GlobalConfig.Path, result.GlobalConfig.Exists))
-			fmt.Fprintf(out, "- Project config: %s\n", fileStatusLabel(result.ProjectConfig.Path, result.ProjectConfig.Exists))
+			fmt.Fprintf(out, "- Global config: %s\n", configStatusLabel(result.GlobalConfig))
+			fmt.Fprintf(out, "- Project config: %s\n", configStatusLabel(result.ProjectConfig))
 			fmt.Fprintf(out, "- OpenCode generated config: %s\n", fileStatusLabel(result.OpenCodeGeneratedConfig.Path, result.OpenCodeGeneratedConfig.Exists))
 			fmt.Fprintln(out)
 			fmt.Fprintln(out, "Tooling")
@@ -82,4 +82,11 @@ func newDoctorCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func configStatusLabel(status doctor.FileStatus) string {
+	if status.Error != "" {
+		return "invalid: " + status.Error
+	}
+	return fileStatusLabel(status.Path, status.Exists)
 }

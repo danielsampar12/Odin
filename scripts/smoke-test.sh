@@ -26,30 +26,57 @@ contains "No changes were made"
 [ ! -e "$HOME/.odin" ] || fail "setup --dry-run wrote $HOME/.odin"
 run model recommend
 contains "Recommended coding model:"
+run companion list
+contains "* baldur"
+contains "tyr"
+run companion show tyr
+contains '"edit": "deny"'
+expect_failure companion show freya
 
 project="$work/project"
 mkdir -p "$project" && cd "$project" && git init -q
 run init
 contains "Created"
-files=(.odin/config.toml .odin/rules.md AGENTS.md)
+contains "Add this line to .gitignore: .odin/generated/"
+files=(.odin/config.toml .odin/rules.md)
 for f in "${files[@]}"; do [ -f "$f" ] || fail "init did not create $f"; done
+[ ! -e AGENTS.md ] || fail "init created AGENTS.md without --agents-md"
 grep -q 'provider = "none"' .odin/config.toml || fail "memory should default to none"
+! grep -q '^\[model\]' .odin/config.toml || fail "the project config should not hold the machine-specific model"
 before=$(cat "${files[@]}" | sha256sum)
 run init
 contains "already exists"
 [ "$before" = "$(cat "${files[@]}" | sha256sum)" ] || fail "a second init changed project files"
+run init --agents-md
+[ -f AGENTS.md ] || fail "init --agents-md did not create AGENTS.md"
 
 run opencode generate
 contains "Created"
 grep -q '".odin/rules.md"' .odin/generated/opencode.jsonc || fail "generated config does not load .odin/rules.md"
-grep -qE '"model": "ollama/.+-ctx(16|32)k"' .odin/generated/opencode.jsonc || fail "generated config does not use a context model"
+grep -qE '"model": "ollama/.+-ctx(16|32|64)k"' .odin/generated/opencode.jsonc || fail "generated config does not use a context model"
+grep -q '"default_agent": "baldur"' .odin/generated/opencode.jsonc || fail "generated config does not start on the default companion"
 run opencode generate
 contains "Kept existing"
+run opencode status
+contains "(up to date)"
+echo '.odin/generated/' > .gitignore
+run opencode generate
+! grep -qF ".gitignore:" <<<"$out" || fail "generate still suggests a .gitignore line that is already there"
 
 expect_failure start --exec
 contains "cannot launch OpenCode"
+sed -i 's/"output": /"output": 1/' .odin/generated/opencode.jsonc
+run opencode status
+contains "(edited by hand)"
+expect_failure opencode generate
+contains "refusing to overwrite"
+run opencode generate --force
 echo '{}' > .odin/generated/opencode.jsonc
 expect_failure opencode generate
 contains "refusing to overwrite"
+
+printf '[model\n' > .odin/config.toml
+expect_failure opencode generate
+contains ".odin/config.toml"
 
 echo "smoke test passed"

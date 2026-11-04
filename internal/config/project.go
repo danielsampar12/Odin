@@ -8,10 +8,11 @@ type ProjectSettings struct {
 	RuntimeProvider  string
 	MemoryProvider   string
 	MemoryHall       string
-	ModelDefault     string
 	CompanionDefault string
 }
 
+// DefaultProjectConfig is .odin/config.toml: shared intent that is safe to commit. Machine-specific
+// values (model, Ollama URL) belong in ~/.odin/config.toml.
 func DefaultProjectConfig(settings ProjectSettings) string {
 	return fmt.Sprintf(`name = %q
 
@@ -25,25 +26,18 @@ provider = %q
 provider = %q
 hall = %q
 
-[model]
-default = %q
-
 [companion]
 default = %q
-`, settings.Name, settings.AgentProvider, settings.RuntimeProvider, settings.MemoryProvider, settings.MemoryHall, settings.ModelDefault, settings.CompanionDefault)
+`, settings.Name, settings.AgentProvider, settings.RuntimeProvider, settings.MemoryProvider, settings.MemoryHall, settings.CompanionDefault)
 }
 
-func DefaultRules(projectName, companionName string) string {
-	return fmt.Sprintf(`# Odin Project Rules
+// DefaultRules is .odin/rules.md. OpenCode puts it in every session's prompt, so it starts nearly empty.
+func DefaultRules() string {
+	return `# Project rules
 
-This project was initialized by Odin v2 for %s.
-
-- Keep generated configs inspectable.
-- Prefer local-first and privacy-first defaults.
-- Treat OpenCode as the coding agent and Ollama as the runtime.
-- Use %s as the default Odin companion unless the project decides otherwise.
-- Keep .odin/generated/ as Odin-managed generated output.
-`, projectName, companionName)
+<!-- OpenCode loads this file into every session in this repository. Add the rules the agent should
+follow here: how to build and test, code style, what to avoid. -->
+`
 }
 
 func DefaultAgents(projectName, companionName string) string {
@@ -68,24 +62,4 @@ Intended stack:
 
 This file is intentionally small and inspectable.
 `, projectName, companionName)
-}
-
-func ReadProjectRuntimeProvider(path string) (string, error) {
-	return readQuotedConfigValue(path, "runtime", "provider")
-}
-
-func ReadProjectMemoryProvider(path string) (string, error) {
-	return readQuotedConfigValue(path, "memory", "provider")
-}
-
-func ReadProjectMemoryHall(path string) (string, error) {
-	return readQuotedConfigValue(path, "memory", "hall")
-}
-
-func ReadProjectModelDefault(path string) (string, error) {
-	return readQuotedConfigValue(path, "model", "default")
-}
-
-func ReadProjectCompanionDefault(path string) (string, error) {
-	return readQuotedConfigValue(path, "companion", "default")
 }

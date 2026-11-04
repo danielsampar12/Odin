@@ -2,14 +2,17 @@ package cli
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/danielsampar12/odin/internal/plugins"
+	"github.com/danielsampar12/odin/internal/system"
 )
 
 func workingDir() (string, error) {
@@ -32,14 +35,24 @@ func ensureDir(path string) (bool, error) {
 	return true, os.MkdirAll(path, 0o755)
 }
 
-func writeFileIfMissing(path, content string, perm os.FileMode) (bool, error) {
-	if _, err := os.Stat(path); err == nil {
-		return false, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return false, err
+// printGitignoreHint suggests ignoring .odin/generated/, which is machine-specific. Odin never edits .gitignore.
+func printGitignoreHint(ctx context.Context, out io.Writer, cwd string) {
+	// check-ignore exits 0 when the path is ignored, 1 when it is not, 128 outside a repository.
+	// --no-index also catches a generated file that was committed before it was ignored.
+	_, err := system.RunCommand(ctx, cwd, "git", "check-ignore", "-q", "--no-index", filepath.Join(".odin", "generated", "opencode.jsonc"))
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+		fmt.Fprintln(out, "Tip: .odin/generated/ is machine-specific. Add this line to .gitignore: .odin/generated/")
 	}
+}
 
-	return true, os.WriteFile(path, []byte(content), perm)
+func printWarnings(out io.Writer, warnings []string) {
+	for _, warning := range warnings {
+		fmt.Fprintf(out, "Warning: %s\n", warning)
+	}
+	if len(warnings) > 0 {
+		fmt.Fprintln(out)
+	}
 }
 
 func installedLabel(installed bool) string {
@@ -90,32 +103,6 @@ func shellDisplay(path, name string) string {
 		return name
 	}
 	return fmt.Sprintf("%s (%s)", name, path)
-}
-
-func detectProfile(cwd string, inGitRepo bool) string {
-	if inGitRepo || hasProjectMarkers(cwd) {
-		return "developer"
-	}
-	return "beginner"
-}
-
-func hasProjectMarkers(dir string) bool {
-	markers := []string{
-		"go.mod",
-		"package.json",
-		"pyproject.toml",
-		"Cargo.toml",
-		".git",
-		"Makefile",
-	}
-
-	for _, marker := range markers {
-		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
-			return true
-		}
-	}
-
-	return false
 }
 
 func printFileAction(writer io.Writer, path string, created bool) {

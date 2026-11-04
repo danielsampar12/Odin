@@ -1,9 +1,11 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"strings"
+
+	"github.com/BurntSushi/toml"
 )
 
 type GlobalSettings struct {
@@ -45,82 +47,63 @@ default = %q
 `, settings.Profile, settings.RuntimeProvider, settings.RuntimeBaseURL, settings.AgentProvider, settings.MemoryProvider, settings.ShellProvider, settings.ShellEnabled, settings.ModelDefault, settings.ModelFallback, settings.CompanionDefault)
 }
 
-func ReadGlobalProfile(path string) (string, error) {
-	return readQuotedConfigValue(path, "", "profile")
+// File is one Odin config file: ~/.odin/config.toml (machine defaults) or .odin/config.toml (shared
+// project intent). Keys a file does not set are empty.
+type File struct {
+	Name    string `toml:"name"`
+	Profile string `toml:"profile"`
+	Runtime struct {
+		Provider string `toml:"provider"`
+		BaseURL  string `toml:"base_url"`
+	} `toml:"runtime"`
+	Agent struct {
+		Provider string `toml:"provider"`
+	} `toml:"agent"`
+	Memory struct {
+		Provider string `toml:"provider"`
+		Hall     string `toml:"hall"`
+	} `toml:"memory"`
+	Shell struct {
+		Provider string `toml:"provider"`
+		Enabled  bool   `toml:"enabled"`
+	} `toml:"shell"`
+	Model struct {
+		Default  string `toml:"default"`
+		Fallback string `toml:"fallback"`
+	} `toml:"model"`
+	Companion struct {
+		Default string `toml:"default"`
+	} `toml:"companion"`
 }
 
-func ReadGlobalRuntimeProvider(path string) (string, error) {
-	return readQuotedConfigValue(path, "runtime", "provider")
+// Load reads an Odin config file. A missing file is an empty File; invalid TOML is an error naming the file.
+func Load(path string) (File, error) {
+	var file File
+	if _, err := toml.DecodeFile(path, &file); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return File{}, nil
+		}
+		return File{}, fmt.Errorf("read %s: %w", path, err)
+	}
+	return file, nil
 }
 
-func ReadGlobalRuntimeBaseURL(path string) (string, error) {
-	return readQuotedConfigValue(path, "runtime", "base_url")
-}
-
-func ReadGlobalMemoryProvider(path string) (string, error) {
-	return readQuotedConfigValue(path, "memory", "provider")
-}
-
-func ReadGlobalModelDefault(path string) (string, error) {
-	return readQuotedConfigValue(path, "model", "default")
-}
-
-func ReadGlobalCompanionDefault(path string) (string, error) {
-	return readQuotedConfigValue(path, "companion", "default")
-}
-
+// ResolveGlobalRuntimeBaseURL returns the Ollama URL from the global config, or fallback when it is unset or unreadable.
 func ResolveGlobalRuntimeBaseURL(path, fallback string) string {
-	baseURL, err := ReadGlobalRuntimeBaseURL(path)
-	if err != nil || baseURL == "" {
+	file, err := Load(path)
+	if err != nil || file.Runtime.BaseURL == "" {
 		return fallback
 	}
-
-	return baseURL
+	return file.Runtime.BaseURL
 }
 
-func quotedValue(line string) string {
-	start := strings.Index(line, `"`)
-	end := strings.LastIndex(line, `"`)
-	if start == -1 || end <= start {
-		return ""
-	}
-	return line[start+1 : end]
-}
-
-func readQuotedConfigValue(path, section, key string) (string, error) {
-	body, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
+// WriteFileIfMissing writes content to path unless the file already exists, and reports whether it wrote.
+func WriteFileIfMissing(path, content string, perm os.FileMode) (bool, error) {
+	if _, err := os.Stat(path); err == nil {
+		return false, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return false, err
 	}
 
-	currentSection := ""
-	for _, rawLine := range strings.Split(string(body), "\n") {
-		line := strings.TrimSpace(rawLine)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-			currentSection = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "["), "]"))
-			continue
-		}
-
-		if section == "" {
-			if currentSection != "" {
-				continue
-			}
-		} else if currentSection != section {
-			continue
-		}
-
-		if !strings.HasPrefix(line, key) {
-			continue
-		}
-
-		if value := quotedValue(line); value != "" {
-			return value, nil
-		}
-	}
-
-	return "", nil
+	return true, os.WriteFile(path, []byte(content), perm)
 }

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 
@@ -31,8 +32,10 @@ func newModelListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List installed local Ollama models",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			globalConfigPath := config.GlobalConfigPath()
-			baseURL := config.ResolveGlobalRuntimeBaseURL(globalConfigPath, ollamaplugin.DefaultBaseURL)
+			baseURL, err := globalBaseURL()
+			if err != nil {
+				return err
+			}
 			commandStatus := ollamaplugin.Detect()
 			apiStatus := ollamaplugin.Probe(cmd.Context(), baseURL)
 
@@ -42,13 +45,9 @@ func newModelListCmd() *cobra.Command {
 
 			if !apiStatus.APIAvailable {
 				if !commandStatus.Installed {
-					fmt.Fprintln(out, "Ollama is not installed and the local API is not reachable.")
-					fmt.Fprintln(out, "Install Ollama, start it, then rerun `odin model list`.")
-					return nil
+					return errors.New("Ollama is not installed and the local API is not reachable; install Ollama, start it, then rerun `odin model list`")
 				}
-				fmt.Fprintf(out, "Ollama API is not reachable: %s\n", apiStatus.Error)
-				fmt.Fprintln(out, "Start Ollama and rerun this command. For local use, the official default is `http://localhost:11434`.")
-				return nil
+				return fmt.Errorf("Ollama API is not reachable at %s (%s); start Ollama (`ollama serve`) and rerun this command", apiStatus.BaseURL, apiStatus.Error)
 			}
 
 			if !commandStatus.Installed {
@@ -137,18 +136,18 @@ func newModelPullCmd() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			modelName := args[0]
-			globalConfigPath := config.GlobalConfigPath()
-			baseURL := config.ResolveGlobalRuntimeBaseURL(globalConfigPath, ollamaplugin.DefaultBaseURL)
+			baseURL, err := globalBaseURL()
+			if err != nil {
+				return err
+			}
 			apiStatus := ollamaplugin.Probe(cmd.Context(), baseURL)
 			out := cmd.OutOrStdout()
 
 			if !apiStatus.APIAvailable {
-				fmt.Fprintln(out, "Ollama API is not responding.")
-				if apiStatus.Error != "" {
-					fmt.Fprintf(out, "Details: %s\n", apiStatus.Error)
-				}
-				fmt.Fprintln(out, "Try starting Ollama and rerun this command.")
-				fmt.Fprintln(out, "If needed, the official CLI command to start the local server is `ollama serve`.")
+				return fmt.Errorf("Ollama API is not responding at %s (%s); start Ollama (`ollama serve`) and rerun this command", apiStatus.BaseURL, apiStatus.Error)
+			}
+			if ollamaModelInstalled(apiStatus.Models, modelName) {
+				fmt.Fprintf(out, "%s is already installed.\n", modelName)
 				return nil
 			}
 
@@ -176,8 +175,7 @@ func newModelPullCmd() *cobra.Command {
 				Model: modelName,
 			})
 			if err != nil {
-				fmt.Fprintf(out, "Pull failed: %s\n", err)
-				return nil
+				return fmt.Errorf("pull %s failed: %w", modelName, err)
 			}
 
 			if response.Status != "" {
@@ -191,4 +189,13 @@ func newModelPullCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "Pull without confirmation")
 	return cmd
+}
+
+// globalBaseURL is the Ollama URL from ~/.odin/config.toml, or Ollama's default when it is unset.
+func globalBaseURL() (string, error) {
+	global, err := config.Load(config.GlobalConfigPath())
+	if err != nil || global.Runtime.BaseURL == "" {
+		return ollamaplugin.DefaultBaseURL, err
+	}
+	return global.Runtime.BaseURL, nil
 }

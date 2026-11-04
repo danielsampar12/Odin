@@ -27,6 +27,7 @@ func Collect(ctx context.Context, cwd string) (Result, error) {
 	projectConfigPath := config.ProjectConfigPath(cwd)
 	openCodeConfigPath := config.ProjectGeneratedOpenCodeConfigPath(cwd)
 	ollamaBaseURL := config.ResolveGlobalRuntimeBaseURL(globalConfigPath, ollama.DefaultBaseURL)
+	globalConfigError, projectConfigError := loadError(globalConfigPath), loadError(projectConfigPath)
 	ollamaAPI := ollama.Probe(ctx, ollamaBaseURL)
 
 	return Result{
@@ -51,10 +52,12 @@ func Collect(ctx context.Context, cwd string) (Result, error) {
 		GlobalConfig: FileStatus{
 			Path:   globalConfigPath,
 			Exists: fileExists(globalConfigPath),
+			Error:  globalConfigError,
 		},
 		ProjectConfig: FileStatus{
 			Path:   projectConfigPath,
 			Exists: fileExists(projectConfigPath),
+			Error:  projectConfigError,
 		},
 		OpenCodeGeneratedConfig: FileStatus{
 			Path:   openCodeConfigPath,
@@ -90,6 +93,14 @@ func statusFromCommand(name, command string) plugins.Status {
 		Installed: status.Installed,
 		Path:      status.Path,
 	}
+}
+
+// loadError reports why an Odin config file cannot be parsed; doctor keeps going with defaults.
+func loadError(path string) string {
+	if _, err := config.Load(path); err != nil {
+		return err.Error()
+	}
+	return ""
 }
 
 func fileExists(path string) bool {

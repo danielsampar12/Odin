@@ -18,10 +18,23 @@ const (
 // OpenCode's system prompt and tool schemas take ~10.4k tokens before any user input, so agents need
 // at least a 16k context; Ollama's default (4096 on a 12 GB GPU) silently truncates it.
 const (
-	agentContext      = 16384
-	agentRoomyContext = 32768
-	chatContext       = 8192
+	agentContext = 16384
+	chatContext  = 8192
 )
+
+// roomierAgentContexts are tried largest first. A long agent task outgrows 32k: OpenCode then compacts
+// the session into a summary, and a small model often loses the thread there (Odin's Exercism benchmark).
+var roomierAgentContexts = []int{65536, 32768}
+
+// agentContextFor is the largest agent context m fits in budget, or the 16k minimum.
+func agentContextFor(m Model, budget float64) int {
+	for _, ctx := range roomierAgentContexts {
+		if needGiB(m, ctx, false) <= budget {
+			return ctx
+		}
+	}
+	return agentContext
+}
 
 type Recommendation struct {
 	Recommended          string
@@ -77,8 +90,8 @@ func Recommend(ramGB int, gpu system.GPUInfo, useCase UseCase) Recommendation {
 
 	pick := usable[best]
 	rec := Recommendation{Recommended: pick.Tag, Fallback: pick.Tag, Context: ctx}
-	if useCase == UseCaseAgent && needGiB(pick, agentRoomyContext, false) <= budget {
-		rec.Context = agentRoomyContext
+	if useCase == UseCaseAgent {
+		rec.Context = agentContextFor(pick, budget)
 	}
 	unverifiedAgent := useCase == UseCaseAgent && pick.ToolCalls != ToolCallsVerified
 	fallback := pick
@@ -121,13 +134,13 @@ func Recommend(ramGB int, gpu system.GPUInfo, useCase UseCase) Recommendation {
 	return rec
 }
 
-// ContextFor returns the context Odin runs an agent model with on this machine: 32k when the model
-// fits there, otherwise the 16k minimum OpenCode needs. Models outside the catalog get the minimum.
+// ContextFor returns the context Odin runs an agent model with on this machine: the largest of 64k and
+// 32k that fits, otherwise the 16k minimum OpenCode needs. Models outside the catalog get the minimum.
 func ContextFor(tag string, ramGB int, gpu system.GPUInfo) int {
 	budget, _ := memoryBudget(ramGB, gpu)
 	for _, m := range Catalog {
-		if m.Tag == tag && needGiB(m, agentRoomyContext, false) <= budget {
-			return agentRoomyContext
+		if m.Tag == tag {
+			return agentContextFor(m, budget)
 		}
 	}
 	return agentContext
