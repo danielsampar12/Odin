@@ -42,7 +42,7 @@ Odin sets up and launches a local AI coding stack for a repository. [Ollama](htt
 **Release binary** (Linux and macOS, amd64 and arm64): download `odin_<version>_<os>_<arch>.tar.gz` from [Releases](https://github.com/danielsampar12/Odin/releases), check it against `checksums.txt`, and put `odin` on your `PATH`:
 
 ```bash
-tar -xzf odin_v0.3.0_linux_amd64.tar.gz
+tar -xzf odin_*_linux_amd64.tar.gz
 mkdir -p ~/.local/bin && mv odin ~/.local/bin/
 ```
 
