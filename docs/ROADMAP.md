@@ -22,6 +22,7 @@ Updated 2026-11-04.
 - Release workflow: pushing a `v*` tag builds Linux and macOS binaries (amd64, arm64) with checksums and publishes a GitHub release.
 - **v0.2.0 released** (2026-10-28): https://github.com/danielsampar12/Odin/releases/tag/v0.2.0
 - **v0.3.0 released** (2026-11-04): https://github.com/danielsampar12/Odin/releases/tag/v0.3.0
+- **v0.3.1 released** (2026-11-04): `go install` builds report the right version. https://github.com/danielsampar12/Odin/releases/tag/v0.3.1
 
 ## Stage 1: reliable foundation (done)
 
